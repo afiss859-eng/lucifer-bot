@@ -1,10 +1,10 @@
 {
   "name": "lucifer-bot",
-  "version": "2.0.0",
-  "description": "𓅂𝐃𝚯𝐌𝚫 𝐋𝐔𝐂𝐈𝐅𝚵𝐑𝚯𓅂 — Bot WhatsApp 500+ commandes",
+  "version": "2.1.0",
+  "description": "𓅂𝐃𝚯𝐌𝚫 𝐋𝐔𝐂𝐈𝐅𝚵𝐑𝚯𓅂 — Bot WhatsApp 684+ commandes",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js",
+    "start": "node -r dotenv/config src/index.js",
     "dev": "nodemon src/index.js"
   },
   "dependencies": {
@@ -13,11 +13,13 @@
     "axios": "^1.6.0",
     "chalk": "^4.1.2",
     "dotenv": "^16.3.1",
+    "express": "^4.18.2",
     "fs-extra": "^11.1.1",
     "moment": "^2.29.4",
     "node-cache": "^5.1.2",
     "pino": "^8.16.1",
     "pino-pretty": "^10.2.3",
+    "qrcode": "^1.5.3",
     "qrcode-terminal": "^0.12.0",
     "jimp": "^0.22.10",
     "sharp": "^0.32.6",
@@ -28,14 +30,22 @@
     "node-fetch": "^2.7.0",
     "translate": "^1.0.1",
     "mathjs": "^12.0.0",
-    "qrcode": "^1.5.3",
     "canvas": "^2.11.2",
     "gm": "^1.25.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
   },
-  "keywords": ["whatsapp", "bot", "lucifer", "xmd", "500-commands", "vip"],
+  "keywords": [
+    "whatsapp",
+    "bot",
+    "lucifer",
+    "xmd",
+    "684-commands",
+    "vip",
+    "ai",
+    "dashboard"
+  ],
   "author": "afiss859-eng",
   "license": "MIT"
 }
