@@ -1,0 +1,9 @@
+node_modules/
+lucifer-session/
+auth_info_baileys/
+.env
+*.log
+database/vip.json
+database/banned.json
+database/warn.json
+database/economy.json
