@@ -152,39 +152,54 @@
       <div style="margin-top:12px;color:var(--dim);font-size:13px" id="statusInfo"></div>
     </div>
 
-    <!-- Pair Code — méthode unique -->
+    <!-- Pair Code -->
     <div class="card" id="pairCard">
-      <h2>🔢 Connexion par Code</h2>
-      <p style="color:var(--dim);font-size:13px;margin-bottom:10px">
-        Entrez votre numéro WhatsApp <strong style="color:var(--gold)">avec l'indicatif pays, sans le +</strong>
-      </p>
-      <div style="background:rgba(139,0,0,.15);border-left:3px solid var(--accent);padding:10px 14px;border-radius:6px;margin-bottom:14px;font-size:12px;color:var(--dim)">
-        🇫🇷 France: <b>33XXXXXXXXX</b> &nbsp;|&nbsp; 🇩🇿 Algérie: <b>213XXXXXXXXX</b> &nbsp;|&nbsp; 🇧🇷 Brésil: <b>55XXXXXXXXXX</b><br>
-        🇨🇩 Congo: <b>243XXXXXXXXX</b> &nbsp;|&nbsp; 🇨🇲 Cameroun: <b>237XXXXXXXXX</b> &nbsp;|&nbsp; 🇸🇳 Sénégal: <b>221XXXXXXXXX</b>
-      </div>
-      <div style="display:flex;gap:10px">
-        <input type="tel" id="pairPhone" placeholder="Ex: 2250102030405" style="flex:1;font-size:16px">
-        <button class="btn gold sm" id="pairBtn" onclick="requestPairCode()">⚡ Générer</button>
-      </div>
-      <div id="pairWaiting" style="display:none;margin-top:12px;text-align:center;padding:12px;background:rgba(255,215,0,.08);border-radius:8px">
-        <div style="font-size:22px">⏳</div>
-        <div style="color:var(--gold);font-weight:bold;margin:4px 0">Génération en cours...</div>
-        <div style="font-size:12px;color:var(--dim)">Le bot contacte WhatsApp. Attendez jusqu'à 30 secondes.</div>
-      </div>
-      <div id="pairCodeDisplay" style="display:none;margin-top:14px">
-        <div class="pair-code-box" id="pairCodeText"></div>
-        <div id="pairCountdown" style="text-align:center;font-size:12px;color:var(--dim);margin-bottom:8px">⏱️ Expire dans <span id="pairSecs">60</span>s</div>
-        <div class="pair-code-steps">
-          <ul>
-            <li>📱 Ouvrez <b>WhatsApp</b> sur votre téléphone</li>
-            <li>⚙️ Allez dans <b>Paramètres → Appareils liés</b></li>
-            <li>➕ Appuyez sur <b>« Lier un appareil »</b></li>
-            <li>🔢 Choisissez <b>« Lier avec un numéro »</b></li>
-            <li>✅ Entrez le code ci-dessus <b>rapidement</b></li>
-          </ul>
+      <h2>🔢 Connexion WhatsApp</h2>
+
+      <!-- Alerte notification -->
+      <div style="background:rgba(255,215,0,.08);border:1px solid rgba(255,215,0,.3);border-radius:8px;padding:12px 14px;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:bold;color:var(--gold);margin-bottom:6px">📳 Comment ça marche :</div>
+        <div style="font-size:12px;color:var(--dim);line-height:1.7">
+          1. Entrez votre numéro → <b>Générer</b><br>
+          2. WhatsApp vous envoie une <b>notification de liaison</b> sur votre téléphone<br>
+          3. Appuyez sur la notification et <b>confirmez</b><br>
+          4. Si pas de notif → entrez le code manuellement : ⚙️ → Appareils liés → Lier avec numéro
         </div>
       </div>
-      <div id="pairMsg"></div>
+
+      <div style="background:rgba(139,0,0,.12);border-left:3px solid var(--accent);padding:8px 12px;border-radius:4px;margin-bottom:14px;font-size:11px;color:var(--dim)">
+        🇫🇷 <b>33</b>XXXXXXXXX &nbsp;|&nbsp; 🇩🇿 <b>213</b>XXXXXXXXX &nbsp;|&nbsp; 🇨🇮 <b>225</b>XXXXXXXXXX &nbsp;|&nbsp; 🇨🇩 <b>243</b>XXXXXXXXX &nbsp;|&nbsp; 🇨🇲 <b>237</b>XXXXXXXXX
+      </div>
+
+      <div style="display:flex;gap:10px;margin-bottom:10px">
+        <input type="tel" id="pairPhone" placeholder="Indicatif + numéro (ex: 33612345678)" style="flex:1;font-size:15px">
+        <button class="btn gold" id="pairBtn" onclick="requestPairCode()" style="white-space:nowrap">⚡ Générer</button>
+      </div>
+
+      <!-- État en cours -->
+      <div id="pairWaiting" style="display:none;text-align:center;padding:16px;background:rgba(255,215,0,.06);border-radius:8px;margin-bottom:10px">
+        <div style="font-size:28px;animation:spin 1s linear infinite;display:inline-block">⏳</div>
+        <div style="color:var(--gold);font-weight:bold;margin:6px 0">Demande en cours...</div>
+        <div style="font-size:11px;color:var(--dim)">Le bot contacte les serveurs WhatsApp (jusqu'à 30s)</div>
+      </div>
+
+      <!-- Code affiché -->
+      <div id="pairCodeDisplay" style="display:none;margin-top:4px">
+        <div style="font-size:11px;color:var(--dim);text-align:center;margin-bottom:6px">✅ Code généré — Vérifiez votre téléphone (notification WhatsApp)</div>
+        <div class="pair-code-box" id="pairCodeText" onclick="this.select&&this.select()" title="Cliquez pour copier"></div>
+        <div style="text-align:center;font-size:11px;color:var(--dim);margin-top:4px">⏱️ Expire dans <span id="pairSecs">60</span>s — <span id="pairCopyMsg"></span></div>
+        <div style="margin-top:10px;font-size:12px;color:var(--dim);background:var(--card2);border-radius:6px;padding:10px">
+          Si pas de notification : ⚙️ <b>Paramètres</b> → <b>Appareils liés</b> → <b>Lier un appareil</b> → <b>Lier avec un numéro</b> → entrez le code
+        </div>
+      </div>
+
+      <div id="pairMsg" style="margin-top:8px"></div>
+
+      <!-- Bouton vider session -->
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+        <button class="btn" onclick="clearSession()" style="background:rgba(139,0,0,.3);font-size:12px;padding:6px 14px">🗑️ Vider la session (si bloqué)</button>
+        <span style="font-size:11px;color:var(--dim);margin-left:8px">Puis redémarrez sur Render</span>
+      </div>
     </div>
 
     <!-- Log -->
@@ -377,42 +392,84 @@ async function updateStatus() {
 }
 
 // ── Pair Code ─────────────────────────────────────────────────────────────────
+let pairTimer = null;
+let pollTimer = null;
+
 async function requestPairCode() {
-  const phone = document.getElementById('pairPhone').value.replace(/\D/g,'');
-  if (!phone || phone.length < 7) return showMsg('pairMsg','Numéro invalide. Exemple: 584265781353','error');
+  const phone = document.getElementById('pairPhone').value.replace(/D/g,'');
+  if (!phone || phone.length < 7) return showMsg('pairMsg','❌ Format: indicatif+numéro sans + (ex: 33612345678)','error');
 
   const btn = document.getElementById('pairBtn');
-  btn.disabled = true; btn.textContent = '⏳ Génération...';
+  btn.disabled = true; btn.textContent = '⏳';
+  document.getElementById('pairWaiting').style.display = 'block';
   document.getElementById('pairCodeDisplay').style.display = 'none';
   document.getElementById('pairMsg').innerHTML = '';
+  if (pairTimer) { clearInterval(pairTimer); pairTimer = null; }
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
 
   try {
-    const r = await fetch('/api/paircode', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone })
-    });
+    const r = await fetch('/api/paircode', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({phone}) });
     const d = await r.json();
+    document.getElementById('pairWaiting').style.display = 'none';
+
     if (d.code) {
-      document.getElementById('pairCodeText').textContent = d.formatted || d.code;
-      document.getElementById('pairCodeDisplay').style.display = 'block';
-      showMsg('pairMsg', '✅ Code généré! Entrez-le dans WhatsApp → Appareils liés → Lier avec numéro', 'success');
-      addLog(`📲 Code pair code généré pour ${phone}`);
-      // Compte à rebours 60s
-      let sec = 60;
-      const timer = setInterval(() => {
-        sec--;
-        if (sec <= 0) { clearInterval(timer); document.getElementById('pairCodeDisplay').style.display='none'; showMsg('pairMsg','⏰ Code expiré. Régénérez-en un nouveau.','error'); }
-      }, 1000);
+      showPairCode(d.formatted || d.code, phone);
+    } else if (d.error && (d.error.includes('automatiquement') || d.error.includes('démarrage'))) {
+      showMsg('pairMsg','⏳ ' + d.error,'info');
+      startCodePolling(phone);
     } else {
-      showMsg('pairMsg', d.error || 'Erreur inconnue', 'error');
-      addLog('❌ Erreur pair code: ' + (d.error || '?'));
+      const tip = d.tip ? '<br><small style='opacity:.65'>💡 ' + d.tip + '</small>' : '';
+      showMsg('pairMsg','❌ ' + (d.error||'Erreur inconnue') + tip,'error');
     }
   } catch(e) {
-    showMsg('pairMsg', 'Erreur réseau: ' + e.message, 'error');
+    document.getElementById('pairWaiting').style.display = 'none';
+    showMsg('pairMsg','❌ Erreur réseau: ' + e.message,'error');
   } finally {
-    btn.disabled = false; btn.textContent = '⚡ Générer le Code';
+    btn.disabled = false; btn.textContent = '⚡ Générer';
   }
+}
+
+function showPairCode(code, phone) {
+  document.getElementById('pairCodeText').textContent = code;
+  document.getElementById('pairCodeDisplay').style.display = 'block';
+  document.getElementById('pairWaiting').style.display = 'none';
+  showMsg('pairMsg','📳 <b>Vérifiez votre téléphone!</b> WhatsApp vous a envoyé une notification de liaison.<br><small style='opacity:.7'>Pas de notif? ⚙️ Paramètres → Appareils liés → Lier avec numéro → entrez le code</small>','success');
+  addLog('📲 Code: ' + code + ' | ' + phone);
+  let sec = 60;
+  document.getElementById('pairSecs').textContent = sec;
+  pairTimer = setInterval(() => {
+    sec--; const el = document.getElementById('pairSecs'); if(el) el.textContent = sec;
+    if (sec <= 0) { clearInterval(pairTimer); pairTimer=null; document.getElementById('pairCodeDisplay').style.display='none'; showMsg('pairMsg','⏰ Expiré. Regénérez.','error'); }
+  }, 1000);
+  document.getElementById('pairCodeText').style.cursor='pointer';
+  document.getElementById('pairCodeText').onclick = () => {
+    navigator.clipboard?.writeText(code.replace(/-/g,''));
+    document.getElementById('pairCopyMsg').textContent = '✅ Copié!';
+    setTimeout(()=>{ const el=document.getElementById('pairCopyMsg'); if(el) el.textContent=''; },2000);
+  };
+}
+
+function startCodePolling(phone) {
+  let tries = 0;
+  pollTimer = setInterval(async () => {
+    tries++;
+    try {
+      const r = await fetch('/api/paircode/poll');
+      const d = await r.json();
+      if (d.fresh && d.code) { clearInterval(pollTimer); pollTimer=null; document.getElementById('pairWaiting').style.display='none'; showPairCode(d.formatted||d.code, phone); }
+    } catch {}
+    if (tries >= 20) { clearInterval(pollTimer); pollTimer=null; }
+  }, 2000);
+}
+
+async function clearSession() {
+  if (!confirm('Vider la session WhatsApp?
+Le bot sera déconnecté. Vous devrez redémarrer sur Render.')) return;
+  try {
+    const r = await fetch('/api/clearsession', { method:'POST', headers:{'x-admin-token': token||'', 'Content-Type':'application/json'} });
+    const d = await r.json();
+    alert(d.message || d.error);
+  } catch(e) { alert('Erreur: ' + e.message); }
 }
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
