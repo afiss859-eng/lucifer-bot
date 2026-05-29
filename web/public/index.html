@@ -154,26 +154,35 @@
 
     <!-- Pair Code — méthode unique -->
     <div class="card" id="pairCard">
-      <h2>🔢 Connexion par Code (Pair Code)</h2>
-      <p style="color:var(--dim);font-size:13px;margin-bottom:14px">
-        Entrez votre numéro WhatsApp pour recevoir un code de liaison à 8 chiffres.
+      <h2>🔢 Connexion par Code</h2>
+      <p style="color:var(--dim);font-size:13px;margin-bottom:10px">
+        Entrez votre numéro WhatsApp <strong style="color:var(--gold)">avec l'indicatif pays, sans le +</strong>
       </p>
+      <div style="background:rgba(139,0,0,.15);border-left:3px solid var(--accent);padding:10px 14px;border-radius:6px;margin-bottom:14px;font-size:12px;color:var(--dim)">
+        🇫🇷 France: <b>33XXXXXXXXX</b> &nbsp;|&nbsp; 🇩🇿 Algérie: <b>213XXXXXXXXX</b> &nbsp;|&nbsp; 🇧🇷 Brésil: <b>55XXXXXXXXXX</b><br>
+        🇨🇩 Congo: <b>243XXXXXXXXX</b> &nbsp;|&nbsp; 🇨🇲 Cameroun: <b>237XXXXXXXXX</b> &nbsp;|&nbsp; 🇸🇳 Sénégal: <b>221XXXXXXXXX</b>
+      </div>
       <div style="display:flex;gap:10px">
-        <input type="tel" id="pairPhone" placeholder="Ex: 584265781353 (avec indicatif, sans +)" style="flex:1">
-        <button class="btn gold sm" id="pairBtn" onclick="requestPairCode()">⚡ Générer le Code</button>
+        <input type="tel" id="pairPhone" placeholder="Ex: 2250102030405" style="flex:1;font-size:16px">
+        <button class="btn gold sm" id="pairBtn" onclick="requestPairCode()">⚡ Générer</button>
+      </div>
+      <div id="pairWaiting" style="display:none;margin-top:12px;text-align:center;padding:12px;background:rgba(255,215,0,.08);border-radius:8px">
+        <div style="font-size:22px">⏳</div>
+        <div style="color:var(--gold);font-weight:bold;margin:4px 0">Génération en cours...</div>
+        <div style="font-size:12px;color:var(--dim)">Le bot contacte WhatsApp. Attendez jusqu'à 30 secondes.</div>
       </div>
       <div id="pairCodeDisplay" style="display:none;margin-top:14px">
         <div class="pair-code-box" id="pairCodeText"></div>
+        <div id="pairCountdown" style="text-align:center;font-size:12px;color:var(--dim);margin-bottom:8px">⏱️ Expire dans <span id="pairSecs">60</span>s</div>
         <div class="pair-code-steps">
           <ul>
-            <li>Ouvrez WhatsApp sur votre téléphone</li>
-            <li>Allez dans ⚙️ Paramètres → Appareils liés</li>
-            <li>Appuyez sur « Lier un appareil »</li>
-            <li>Choisissez « Lier avec un numéro de téléphone »</li>
-            <li>Entrez le code affiché ci-dessus</li>
+            <li>📱 Ouvrez <b>WhatsApp</b> sur votre téléphone</li>
+            <li>⚙️ Allez dans <b>Paramètres → Appareils liés</b></li>
+            <li>➕ Appuyez sur <b>« Lier un appareil »</b></li>
+            <li>🔢 Choisissez <b>« Lier avec un numéro »</b></li>
+            <li>✅ Entrez le code ci-dessus <b>rapidement</b></li>
           </ul>
         </div>
-        <p style="color:var(--dim);font-size:11px;text-align:center;margin-top:8px">⏱️ Le code expire dans 60 secondes</p>
       </div>
       <div id="pairMsg"></div>
     </div>
