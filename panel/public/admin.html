@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>𓅂 LUCIFERO — Admin Panel</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav class="navbar">
+  <span class="navbar-brand">𓅂 LUCIFERO — Admin Panel</span>
+  <div class="navbar-links">
+    <span id="navAdmin" style="color:var(--gold);font-size:13px;font-weight:700">👑 Super Admin</span>
+    <a href="/dashboard" class="btn btn-outline btn-sm">Mon Espace</a>
+    <button class="btn btn-danger btn-sm" onclick="logout()">Déconnexion</button>
+  </div>
+</nav>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-item active" onclick="show('stats',this)"><span class="icon">📊</span> Vue d'ensemble</div>
+    <div class="sidebar-item" onclick="show('users',this)"><span class="icon">👥</span> Utilisateurs</div>
+    <div class="sidebar-item" onclick="show('bots',this)"><span class="icon">🤖</span> Tous les Bots</div>
+    <div class="sidebar-item" onclick="show('payments',this)"><span class="icon">💳</span> Paiements</div>
+    <div class="sidebar-item" onclick="show('tickets',this)"><span class="icon">🎫</span> Support</div>
+    <div class="sidebar-item" onclick="show('broadcast',this)"><span class="icon">📢</span> Broadcast</div>
+    <div class="sidebar-item" onclick="show('settings',this)"><span class="icon">⚙️</span> Paramètres</div>
+  </aside>
+
+  <main class="main-content">
+    <div id="globalAlert"></div>
+
+    <!-- ═══ STATS ═══ -->
+    <div id="sec-stats" class="section active">
+      <h2 style="color:var(--gold);margin-bottom:20px">📊 Vue d'ensemble</h2>
+      <div class="grid-4" id="statsGrid"><div class="spinner"></div></div>
+      <div style="margin-top:20px" class="grid-2">
+        <div class="card">
+          <div class="card-title">🔗 Liens rapides</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <a href="/dashboard" class="btn btn-outline">🌐 Voir l'espace client</a>
+            <a href="http://localhost:3000" target="_blank" class="btn btn-outline">🔧 Dashboard Bot WhatsApp</a>
+            <a href="https://whatsapp.com/channel/0029VbCK9wyCXC3JTDw6H51c" target="_blank" class="btn btn-gold">📺 Canal officiel</a>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">⚡ Actions rapides</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button class="btn btn-primary" onclick="show('broadcast',document.querySelectorAll('.sidebar-item')[5])">📢 Broadcast WhatsApp</button>
+            <button class="btn btn-outline" onclick="show('tickets',document.querySelectorAll('.sidebar-item')[4])">🎫 Voir les tickets ouverts</button>
+            <button class="btn btn-outline" onclick="loadStats()">🔄 Actualiser les stats</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ USERS ═══ -->
+    <div id="sec-users" class="section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <h2 style="color:var(--gold)">👥 Utilisateurs</h2>
+        <input type="text" class="form-input" style="width:250px" id="userSearch" placeholder="🔍 Rechercher..." oninput="filterUsers()">
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table id="usersTable">
+            <tr><th>Nom</th><th>Email</th><th>Plan</th><th>Bots</th><th>Statut</th><th>Inscrit le</th><th>Actions</th></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ BOTS ═══ -->
+    <div id="sec-bots" class="section">
+      <h2 style="color:var(--gold);margin-bottom:20px">🤖 Tous les Bots</h2>
+      <div class="card">
+        <div class="table-wrap">
+          <table id="botsTable">
+            <tr><th>Nom</th><th>Propriétaire</th><th>Téléphone</th><th>Statut</th><th>Créé le</th></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAYMENTS ═══ -->
+    <div id="sec-payments" class="section">
+      <h2 style="color:var(--gold);margin-bottom:20px">💳 Paiements</h2>
+      <div class="card">
+        <div class="table-wrap">
+          <table id="paymentsTable">
+            <tr><th>Client</th><th>Plan</th><th>Montant</th><th>Méthode</th><th>Référence</th><th>Statut</th><th>Action</th></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ TICKETS ═══ -->
+    <div id="sec-tickets" class="section">
+      <h2 style="color:var(--gold);margin-bottom:20px">🎫 Tickets Support</h2>
+      <div id="ticketsList"></div>
+    </div>
+
+    <!-- ═══ BROADCAST ═══ -->
+    <div id="sec-broadcast" class="section">
+      <h2 style="color:var(--gold);margin-bottom:20px">📢 Broadcast</h2>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">📱 Message WhatsApp</div>
+          <div id="bcAlert"></div>
+          <div class="form-group">
+            <label class="form-label">Message à envoyer à tous les utilisateurs du bot</label>
+            <textarea class="form-textarea" id="bcMsg" rows="5" placeholder="Votre message..."></textarea>
+          </div>
+          <button class="btn btn-primary btn-full" onclick="sendBroadcast()">📤 Envoyer à tous</button>
+        </div>
+        <div class="card">
+          <div class="card-title">💰 Modifier coins d'un utilisateur</div>
+          <div class="form-group">
+            <label class="form-label">JID WhatsApp</label>
+            <input type="text" class="form-input" id="coinsJid" placeholder="584265781353@s.whatsapp.net">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Montant (négatif pour retirer)</label>
+            <input type="number" class="form-input" id="coinsAmt" placeholder="500">
+          </div>
+          <button class="btn btn-gold btn-full" onclick="addCoins()">Modifier les coins</button>
+          <div id="coinsAlert"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SETTINGS ═══ -->
+    <div id="sec-settings" class="section">
+      <h2 style="color:var(--gold);margin-bottom:20px">⚙️ Paramètres Globaux</h2>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">🔧 Configuration</div>
+          <div id="settingsForm"></div>
+          <button class="btn btn-primary" onclick="saveSettings()" style="margin-top:16px">Sauvegarder</button>
+        </div>
+        <div class="card">
+          <div class="card-title">⚠️ Zone Danger</div>
+          <div class="alert alert-error" style="margin-bottom:16px">Ces actions sont irréversibles</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button class="btn btn-danger" onclick="if(confirm('Redémarrer le bot?'))restartBot()">🔄 Redémarrer le Bot</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL: User detail -->
+<div class="modal-overlay" id="userModal">
+  <div class="modal" style="max-width:560px">
+    <span class="modal-close" onclick="closeModal('userModal')">✕</span>
+    <div class="modal-title" id="userModalTitle">Gestion Utilisateur</div>
+    <div id="userModalContent"></div>
+  </div>
+</div>
+
+<!-- MODAL: Reply ticket -->
+<div class="modal-overlay" id="ticketModal">
+  <div class="modal">
+    <span class="modal-close" onclick="closeModal('ticketModal')">✕</span>
+    <div class="modal-title">💬 Répondre au Ticket</div>
+    <div id="ticketDetail" style="margin-bottom:16px"></div>
+    <div class="form-group">
+      <label class="form-label">Votre réponse</label>
+      <textarea class="form-textarea" id="ticketReply" rows="4" placeholder="Votre réponse..."></textarea>
+    </div>
+    <input type="hidden" id="replyTicketId">
+    <button class="btn btn-primary btn-full" onclick="sendReply()">Envoyer la réponse</button>
+  </div>
+</div>
+
+<script>
+const API = '/api';
+let token = localStorage.getItem('panelToken');
+let user  = JSON.parse(localStorage.getItem('panelUser') || '{}');
+let allUsers = [];
+
+if (!token || !user.isAdmin) window.location.href = '/login';
+document.getElementById('navAdmin').textContent = `👑 ${user.name}`;
+
+async function adminFetch(url, opts={}) {
+  const res = await fetch(url, { ...opts, headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}`, ...opts.headers } });
+  const data = await res.json();
+  if (res.status === 401 || res.status === 403) { alert(data.error); return null; }
+  return data;
+}
+
+function logout() { localStorage.clear(); window.location.href = '/login'; }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function show(name, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
+  document.getElementById('sec-'+name).classList.add('active');
+  if (el) el.classList.add('active');
+  const loaders = { stats: loadStats, users: loadUsers, bots: loadBots, payments: loadPayments, tickets: loadTickets, settings: loadSettings };
+  loaders[name]?.();
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+async function loadStats() {
+  const s = await adminFetch(`${API}/admin/stats`);
+  if (!s) return;
+  const h = Math.floor(s.uptime/3600), m = Math.floor((s.uptime%3600)/60);
+  document.getElementById('statsGrid').innerHTML = [
+    ['👥 Utilisateurs', s.users],
+    ['🤖 Bots total', s.bots],
+    ['🟢 Bots actifs', s.botsRunning],
+    ['💰 Revenus ($)', s.revenue.toFixed(2)],
+    ['🎫 Tickets ouverts', s.tickets],
+    ['💳 Paiements', s.payments],
+    ['⏱️ Uptime', `${h}h ${m}m`],
+    ['🔧 Node.js', s.nodeVersion],
+  ].map(([l,v]) => `<div class="stat-card"><div class="stat-value">${v}</div><div class="stat-label">${l}</div></div>`).join('');
+}
+
+// ── Users ─────────────────────────────────────────────────────────────────────
+async function loadUsers() {
+  allUsers = await adminFetch(`${API}/admin/users`) || [];
+  renderUsers(allUsers);
+}
+
+function renderUsers(users) {
+  const tbody = users.map(u => `<tr>
+    <td><strong>${u.name}</strong></td>
+    <td style="color:var(--dim);font-size:12px">${u.email}</td>
+    <td><span class="badge badge-${u.plan}">${u.plan}</span></td>
+    <td>${(u.botIds||[]).length} / ${u.maxBots}</td>
+    <td><span class="badge badge-${u.isActive?'green':'red'}">${u.isActive?'Actif':'Banni'}</span></td>
+    <td style="color:var(--dim);font-size:12px">${new Date(u.createdAt).toLocaleDateString('fr-FR')}</td>
+    <td>
+      <button class="btn btn-outline btn-sm" onclick="openUser('${u.id}')">Gérer</button>
+    </td>
+  </tr>`).join('');
+  document.getElementById('usersTable').innerHTML = `<tr><th>Nom</th><th>Email</th><th>Plan</th><th>Bots</th><th>Statut</th><th>Inscrit le</th><th>Actions</th></tr>${tbody}`;
+}
+
+function filterUsers() {
+  const q = document.getElementById('userSearch').value.toLowerCase();
+  renderUsers(allUsers.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.plan.includes(q)));
+}
+
+async function openUser(id) {
+  const data = await adminFetch(`${API}/admin/users/${id}`);
+  if (!data) return;
+  const { user: u, bots, payments } = data;
+  document.getElementById('userModalTitle').textContent = `${u.name} — ${u.email}`;
+  document.getElementById('userModalContent').innerHTML = `
+    <div class="grid-2" style="margin-bottom:16px">
+      <div><div class="form-label">Plan actuel</div><span class="badge badge-${u.plan}">${u.plan}</span></div>
+      <div><div class="form-label">Statut</div><span class="badge badge-${u.isActive?'green':'red'}">${u.isActive?'Actif':'Désactivé'}</span></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Changer le plan</label>
+      <select class="form-select" id="uPlan">
+        ${['free','basic','vip','premium','owner'].map(p => `<option value="${p}" ${p===u.plan?'selected':''}>${p}</option>`).join('')}
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button class="btn btn-primary btn-sm" onclick="setUserPlan('${u.id}')">Appliquer le plan</button>
+      <button class="btn btn-${u.isActive?'danger':'green'} btn-sm" onclick="toggleUser('${u.id}')">
+        ${u.isActive?'Désactiver':'Réactiver'}
+      </button>
+      ${!u.isAdmin ? `<button class="btn btn-outline btn-sm" onclick="if(confirm('Supprimer définitivement?'))deleteUser('${u.id}')">Supprimer</button>` : ''}
+    </div>
+    <div style="font-size:13px;color:var(--dim)">
+      <strong style="color:var(--text)">Bots:</strong> ${bots.length} | 
+      <strong style="color:var(--text)">Paiements:</strong> ${payments.length}
+    </div>`;
+  document.getElementById('userModal').classList.add('open');
+}
+
+async function setUserPlan(id) {
+  const plan = document.getElementById('uPlan').value;
+  const r = await adminFetch(`${API}/admin/users/${id}/plan`, { method:'PATCH', body:JSON.stringify({plan}) });
+  showGlobal(r?.message||r?.error, r?.message?'success':'error');
+  closeModal('userModal'); loadUsers();
+}
+
+async function toggleUser(id) {
+  await adminFetch(`${API}/admin/users/${id}/toggle`, { method:'PATCH' });
+  closeModal('userModal'); loadUsers();
+}
+
+async function deleteUser(id) {
+  await adminFetch(`${API}/admin/users/${id}`, { method:'DELETE' });
+  closeModal('userModal'); loadUsers();
+}
+
+// ── Bots ─────────────────────────────────────────────────────────────────────
+async function loadBots() {
+  const bots = await adminFetch(`${API}/admin/bots`) || [];
+  document.getElementById('botsTable').innerHTML = `
+    <tr><th>Nom</th><th>Propriétaire</th><th>Téléphone</th><th>Statut</th><th>Créé le</th></tr>
+    ${bots.map(b => `<tr>
+      <td>${b.name}</td>
+      <td style="color:var(--dim)">${b.ownerName}</td>
+      <td>${b.phone}</td>
+      <td><span class="badge badge-${b.status==='running'?'green':'red'}">${b.status}</span></td>
+      <td style="color:var(--dim);font-size:12px">${new Date(b.createdAt).toLocaleDateString('fr-FR')}</td>
+    </tr>`).join('')}`;
+}
+
+// ── Payments ──────────────────────────────────────────────────────────────────
+async function loadPayments() {
+  const payments = await adminFetch(`${API}/admin/payments`) || [];
+  document.getElementById('paymentsTable').innerHTML = `
+    <tr><th>Client</th><th>Plan</th><th>Montant</th><th>Méthode</th><th>Référence</th><th>Statut</th><th>Action</th></tr>
+    ${payments.map(p => `<tr>
+      <td>${p.userName}</td>
+      <td><span class="badge badge-${p.plan}">${p.plan}</span></td>
+      <td>$${p.amount}</td>
+      <td>${p.method}</td>
+      <td style="font-size:12px;color:var(--dim)">${p.reference||'—'}</td>
+      <td><span class="badge badge-${p.status==='confirmed'?'green':'blue'}">${p.status}</span></td>
+      <td>
+        ${p.status==='pending'?`<button class="btn btn-green btn-sm" onclick="confirmPayment('${p.id}')">✅ Confirmer</button>`:'—'}
+      </td>
+    </tr>`).join('')}`;
+}
+
+async function confirmPayment(id) {
+  const r = await adminFetch(`${API}/admin/payments/${id}/confirm`, { method:'POST' });
+  showGlobal(r?.message||r?.error, r?.message?'success':'error');
+  loadPayments();
+}
+
+// ── Tickets ───────────────────────────────────────────────────────────────────
+async function loadTickets() {
+  const tickets = await adminFetch(`${API}/support`) || [];
+  const open = tickets.filter(t => t.status === 'open');
+  document.getElementById('ticketsList').innerHTML = `
+    <div style="margin-bottom:12px;color:var(--dim)">🔴 ${open.length} ticket(s) ouvert(s)</div>
+    ${tickets.map(t => `
+      <div class="card" style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+          <div>
+            <strong>${t.subject}</strong>
+            <span class="badge badge-${t.priority==='high'?'red':t.priority==='low'?'blue':'blue'}" style="margin-left:8px">${t.priority}</span>
+          </div>
+          <span class="badge badge-${t.status==='open'?'red':'green'}">${t.status}</span>
+        </div>
+        <div style="font-size:13px;color:var(--dim)">👤 ${t.userName} | 📅 ${new Date(t.createdAt).toLocaleDateString('fr-FR')}</div>
+        <div style="margin-top:8px;font-size:13px;background:var(--card2);padding:10px;border-radius:6px">${t.message}</div>
+        ${t.reply ? `<div style="margin-top:8px;font-size:13px;background:rgba(0,230,118,.05);padding:10px;border-radius:6px"><strong style="color:var(--green)">Réponse:</strong> ${t.reply}</div>` : ''}
+        ${t.status==='open'?`<button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="openReply('${t.id}','${t.subject.replace(/'/g,"\\'")}','${t.message.replace(/'/g,"\\'")}')">💬 Répondre</button>`:''}
+      </div>`).join('')}`;
+}
+
+function openReply(id, subject, message) {
+  document.getElementById('replyTicketId').value = id;
+  document.getElementById('ticketDetail').innerHTML = `
+    <div style="font-size:13px;background:var(--card2);padding:12px;border-radius:8px">
+      <strong>${subject}</strong><br>
+      <span style="color:var(--dim)">${message}</span>
+    </div>`;
+  document.getElementById('ticketModal').classList.add('open');
+}
+
+async function sendReply() {
+  const id = document.getElementById('replyTicketId').value;
+  const reply = document.getElementById('ticketReply').value;
+  const r = await adminFetch(`${API}/support/${id}/reply`, { method:'POST', body:JSON.stringify({reply}) });
+  if (r?.id) { closeModal('ticketModal'); loadTickets(); showGlobal('Réponse envoyée!', 'success'); }
+}
+
+// ── Broadcast ─────────────────────────────────────────────────────────────────
+async function sendBroadcast() {
+  const message = document.getElementById('bcMsg').value;
+  if (!message) return;
+  const r = await adminFetch(`${API}/admin/broadcast`, { method:'POST', body:JSON.stringify({message}) });
+  document.getElementById('bcAlert').innerHTML = `<div class="alert alert-${r?.message?'success':'error'}">${r?.message||r?.error}</div>`;
+}
+
+async function addCoins() {
+  const r = await fetch('/api/coins', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-admin-token':token},
+    body:JSON.stringify({jid:document.getElementById('coinsJid').value,amount:document.getElementById('coinsAmt').value})
+  }).then(r=>r.json());
+  document.getElementById('coinsAlert').innerHTML = `<div class="alert alert-${r?.message?'success':'error'}" style="margin-top:8px">${r?.message||r?.error}</div>`;
+}
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+async function loadSettings() {
+  const s = await adminFetch(`${API}/admin/settings`);
+  if (!s) return;
+  document.getElementById('settingsForm').innerHTML = `
+    <div class="form-group">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+        <input type="checkbox" id="regOpen" ${s.registrationOpen?'checked':''} style="width:16px;height:16px">
+        <span class="form-label" style="margin:0">Inscriptions ouvertes</span>
+      </label>
+    </div>
+    <div class="form-group">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+        <input type="checkbox" id="maintenance" ${s.maintenanceMode?'checked':''} style="width:16px;height:16px">
+        <span class="form-label" style="margin:0">Mode maintenance</span>
+      </label>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Bannière d'annonce</label>
+      <input type="text" class="form-input" id="banner" value="${s.announcementBanner||''}" placeholder="Texte affiché en haut du site">
+    </div>`;
+}
+
+async function saveSettings() {
+  const r = await adminFetch(`${API}/admin/settings`, { method:'PATCH', body:JSON.stringify({
+    registrationOpen: document.getElementById('regOpen').checked,
+    maintenanceMode: document.getElementById('maintenance').checked,
+    announcementBanner: document.getElementById('banner').value,
+  })});
+  showGlobal('Paramètres sauvegardés!', 'success');
+}
+
+async function restartBot() {
+  await fetch('/api/restart', { method:'POST', headers:{'x-admin-token':token} });
+  showGlobal('Redémarrage en cours...', 'info');
+}
+
+function showGlobal(msg, type) {
+  document.getElementById('globalAlert').innerHTML = `<div class="alert alert-${type}" style="margin-bottom:16px">${msg}</div>`;
+  setTimeout(() => document.getElementById('globalAlert').innerHTML = '', 4000);
+}
+
+// Init
+loadStats();
+</script>
+</body>
+</html>
