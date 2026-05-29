@@ -1,8 +1,6 @@
 /**
  * 𓅂𝐃𝚯𝐌𝚫 𝐋𝐔𝐂𝐈𝐅𝚵𝐑𝚯𓅂 — Dashboard Web
- * Pair Code: appelle requestPairCode() de index.js (attend le signal QR interne)
  */
-
 const express = require('express');
 const path    = require('path');
 const fs      = require('fs-extra');
@@ -10,56 +8,46 @@ const crypto  = require('crypto');
 const config  = require('../config/config');
 
 const app = express();
-let _sock        = null;
-let _connected   = false;
-let _pairCodeFn  = null;   // ← Fonction injectée par index.js
+let _sock          = null;
+let _connected     = false;
+let _pairCodeFn    = null;
+let _getLastCodeFn = null;
+let _pendingCode   = null;   // Code poussé par index.js (pair code auto)
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ─── Sessions admin ──────────────────────────────────────────────────────────
+// ── Sessions admin ────────────────────────────────────────────────────────────
 const sessions = new Set();
-const ADMIN_TOKEN_FILE = path.join(__dirname, '..', 'database', 'admin_tokens.json');
-
-function loadTokens() {
-  try {
-    const raw = fs.readJsonSync(ADMIN_TOKEN_FILE);
-    Array.isArray(raw) && raw.forEach(t => sessions.add(t));
-  } catch {}
-}
-function saveTokens() { fs.outputJsonSync(ADMIN_TOKEN_FILE, [...sessions]); }
+const TOKEN_FILE = path.join(__dirname, '..', 'database', 'admin_tokens.json');
+function loadTokens() { try { const r = fs.readJsonSync(TOKEN_FILE); Array.isArray(r) && r.forEach(t => sessions.add(t)); } catch {} }
+function saveTokens() { fs.outputJsonSync(TOKEN_FILE, [...sessions]); }
 loadTokens();
 
-function authMiddleware(req, res, next) {
+function auth(req, res, next) {
   const token = req.headers['x-admin-token'] || req.query.token;
-  if (!token || !sessions.has(token)) {
-    return res.status(401).json({ error: 'Non autorisé. Connectez-vous d\'abord.' });
-  }
+  if (!token || !sessions.has(token)) return res.status(401).json({ error: 'Non autorisé.' });
   next();
 }
 
-// ─── Routes publiques ─────────────────────────────────────────────────────────
-
+// ── Routes publiques ──────────────────────────────────────────────────────────
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 app.post('/api/login', (req, res) => {
   const { password } = req.body;
-  const adminPass = process.env.ADMIN_PASSWORD || config.ADMIN_PASSWORD || 'lucifer2024';
-  if (password !== adminPass) return res.status(403).json({ error: 'Mot de passe incorrect.' });
+  if (password !== (process.env.ADMIN_PASSWORD || config.ADMIN_PASSWORD || 'lucifer2024'))
+    return res.status(403).json({ error: 'Mot de passe incorrect.' });
   const token = crypto.randomBytes(32).toString('hex');
-  sessions.add(token);
-  saveTokens();
+  sessions.add(token); saveTokens();
   res.json({ token, message: 'Connexion réussie!' });
 });
 
-app.post('/api/logout', authMiddleware, (req, res) => {
-  sessions.delete(req.headers['x-admin-token']);
-  saveTokens();
+app.post('/api/logout', auth, (req, res) => {
+  sessions.delete(req.headers['x-admin-token']); saveTokens();
   res.json({ message: 'Déconnecté.' });
 });
 
-// ─── Statut public ────────────────────────────────────────────────────────────
 app.get('/api/status', (req, res) => {
   res.json({
     connected:  _connected,
@@ -67,103 +55,71 @@ app.get('/api/status', (req, res) => {
     version:    config.VERSION,
     owner:      config.OWNER_NUMBER,
     botReady:   !!_sock,
-    socketReady: !!_pairCodeFn,
   });
 });
 
-// ─── Pair Code ────────────────────────────────────────────────────────────────
-// Accessible SANS auth — nécessaire pour la première connexion
-// Délègue à requestPairCode() dans index.js qui gère correctement le timing Baileys
+// ── Pair Code (✅ NOUVEAU FLOW) ────────────────────────────────────────────────
 app.post('/api/paircode', async (req, res) => {
   const { phone } = req.body;
+  if (!phone) return res.status(400).json({ error: 'Numéro requis.' });
 
-  if (!phone) {
-    return res.status(400).json({ error: 'Numéro de téléphone requis.' });
-  }
+  const clean = phone.replace(/[^0-9]/g, '');
+  if (clean.length < 7) return res.status(400).json({
+    error: 'Numéro invalide.',
+    tip: 'Entrez l\'indicatif pays + numéro sans le + ni les zéros inutiles.\nEx France: 33612345678 | Côte d\'Ivoire: 2250102030405',
+  });
 
-  // Vérifier format numéro
-  const cleanPhone = phone.replace(/[^0-9]/g, '');
-  if (cleanPhone.length < 7) {
-    return res.status(400).json({
-      error: 'Numéro invalide.',
-      tip: 'Entrez le numéro complet avec l\'indicatif pays, sans le + (ex: 584265781353)',
-    });
-  }
-
-  if (_connected) {
-    return res.status(400).json({ error: 'Bot déjà connecté à WhatsApp.' });
-  }
-
-  if (!_pairCodeFn) {
-    return res.status(503).json({
-      error: 'Bot en cours de démarrage. Attendez 20-30 secondes puis réessayez.',
-    });
-  }
+  if (_connected) return res.status(400).json({ error: 'Bot déjà connecté.' });
+  if (!_pairCodeFn) return res.status(503).json({
+    error: 'Bot pas encore prêt.',
+    tip: 'Attendez 20-30 secondes que le bot finisse de démarrer.',
+  });
 
   try {
-    // Délègue à index.js — attend le bon état Baileys avant de générer le code
-    const code = await _pairCodeFn(cleanPhone);
+    const code = await _pairCodeFn(clean);
     const formatted = code.match(/.{1,4}/g)?.join('-') || code;
-
-    res.json({
-      code,
-      formatted,
-      message: `Code: ${formatted} — WhatsApp → ⚙️ Paramètres → Appareils liés → Lier avec numéro`,
-    });
-  } catch (err) {
-    const msg = err.message || 'Erreur inconnue';
-
-    // Erreurs communes avec solutions
-    if (msg.includes('rate') || msg.includes('limit') || msg.includes('429')) {
-      return res.status(429).json({
-        error: 'Trop de tentatives. Attendez 1-2 minutes.',
-        tip: 'WhatsApp limite les demandes de code. Patientez avant de réessayer.',
-      });
-    }
-    if (msg.includes('Timeout') || msg.includes('timeout')) {
-      return res.status(503).json({
-        error: 'Délai dépassé. Le bot n\'est pas encore prêt.',
-        tip: 'Attendez 30 secondes que le bot finisse de démarrer, puis réessayez.',
-      });
-    }
-    if (msg.includes('already') || msg.includes('déjà')) {
-      return res.status(400).json({
-        error: 'Bot déjà connecté ou code déjà demandé.',
-        tip: 'Si vous avez une ancienne session, supprimez le dossier "session" et redéployez.',
-      });
-    }
-
-    res.status(500).json({
-      error: 'Erreur: ' + msg,
-      tip: 'Si le problème persiste: supprimez la session et redéployez.',
-    });
+    _pendingCode = { code, formatted, time: Date.now() };
+    res.json({ code, formatted, message: 'Code généré! Vérifiez votre WhatsApp (notification) ou entrez le code manuellement.' });
+  } catch(e) {
+    const msg = e.message || 'Erreur inconnue';
+    if (msg.includes('rate') || msg.includes('limit') || msg.includes('429'))
+      return res.status(429).json({ error: 'Trop de tentatives. Attendez 2 minutes.', tip: 'WhatsApp limite les demandes de code.' });
+    if (msg.includes('déjà connecté') || msg.includes('already'))
+      return res.status(400).json({ error: msg, tip: 'Videz la session via le bouton du dashboard et redémarrez.' });
+    res.status(500).json({ error: msg, tip: 'Si ça persiste, videz la session et redéployez.' });
   }
 });
 
-// ─── Vider la session (⚠️ déconnecte le bot) ─────────────────────────────────
-app.post('/api/clearsession', authMiddleware, async (req, res) => {
-  const sessionDir = path.join(__dirname, '..', config.SESSION_NAME || 'session');
+// ── Polling code (le dashboard vérifie si un code a été généré en auto) ────────
+app.get('/api/paircode/poll', (req, res) => {
+  const src = _pendingCode || (_getLastCodeFn ? _getLastCodeFn() : null);
+  if (src && src.code && Date.now() - src.time < 120000) {
+    res.json({ code: src.code, formatted: src.formatted || src.code, fresh: true });
+  } else {
+    res.json({ fresh: false });
+  }
+});
+
+// ── Vider la session ──────────────────────────────────────────────────────────
+app.post('/api/clearsession', auth, async (req, res) => {
+  const sessionDir = path.join(__dirname, '..', config.SESSION_NAME || 'lucifer-session');
   try {
     await fs.emptyDir(sessionDir);
     res.json({ message: '✅ Session vidée. Redémarrez le service sur Render pour reconnecter.' });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// ─── Routes admin (protégées) ─────────────────────────────────────────────────
-
-app.get('/api/stats', authMiddleware, (req, res) => {
-  const db   = require('../database/db');
-  const data = db.getData();
+// ── Routes admin (protégées) ──────────────────────────────────────────────────
+app.get('/api/stats', auth, (req, res) => {
+  const db = require('../database/db'), d = db.getData();
   res.json({
-    totalUsers:  Object.keys(data.users   || {}).length,
-    vipCount:    Object.keys(data.vip     || {}).length,
-    bannedCount: Object.keys(data.banned  || {}).length,
-    groups:      Object.keys(data.notes   || {}).length,
-    totalCoins:  Object.values(data.economy || {}).reduce((a, u) => a + (u.coins || 0), 0),
+    totalUsers:  Object.keys(d.users   || {}).length,
+    vipCount:    Object.keys(d.vip     || {}).length,
+    bannedCount: Object.keys(d.banned  || {}).length,
+    groups:      Object.keys(d.notes   || {}).length,
+    totalCoins:  Object.values(d.economy || {}).reduce((a, u) => a + (u.coins || 0), 0),
     uptime:      Math.floor(process.uptime()),
-    uptimeHuman: formatUptime(process.uptime()),
+    uptimeHuman: fmtUptime(process.uptime()),
     version:     config.VERSION,
     commands:    '700+',
     connected:   _connected,
@@ -173,126 +129,86 @@ app.get('/api/stats', authMiddleware, (req, res) => {
   });
 });
 
-app.get('/api/vip', authMiddleware, (req, res) => {
-  res.json(require('../database/db').getData().vip || {});
+app.get('/api/users', auth, (req, res) => {
+  const db = require('../database/db'), d = db.getData();
+  res.json(Object.entries(d.users || {}).slice(0, 200).map(([jid, info]) => ({
+    jid, lastSeen: info.lastSeen || null,
+    isVip: !!(d.vip || {})[jid], isBanned: !!(d.banned || {})[jid],
+    coins: (d.economy || {})[jid]?.coins || 0,
+  })));
 });
 
-app.post('/api/vip/add', authMiddleware, (req, res) => {
-  const db = require('../database/db');
-  const { jid } = req.body;
-  if (!jid) return res.status(400).json({ error: 'JID requis.' });
-  const j = jid.includes('@') ? jid : jid.replace(/\D/g,'') + '@s.whatsapp.net';
-  db.addVip(j);
-  res.json({ message: `✅ VIP ajouté: ${j}` });
+app.get('/api/vip', auth, (req, res) => res.json(require('../database/db').getData().vip || {}));
+app.post('/api/vip/add', auth, (req, res) => {
+  const db = require('../database/db'), j = norm(req.body.jid);
+  if (!j) return res.status(400).json({ error: 'JID requis.' });
+  db.addVip(j); res.json({ message: '✅ VIP: ' + j });
+});
+app.post('/api/vip/remove', auth, (req, res) => {
+  const db = require('../database/db'), j = norm(req.body.jid);
+  if (!j) return res.status(400).json({ error: 'JID requis.' });
+  db.removeVip(j); res.json({ message: '✅ Retiré: ' + j });
 });
 
-app.post('/api/vip/remove', authMiddleware, (req, res) => {
-  const db = require('../database/db');
-  const { jid } = req.body;
-  if (!jid) return res.status(400).json({ error: 'JID requis.' });
-  const j = jid.includes('@') ? jid : jid.replace(/\D/g,'') + '@s.whatsapp.net';
-  db.removeVip(j);
-  res.json({ message: `✅ VIP retiré: ${j}` });
+app.get('/api/banned', auth, (req, res) => res.json(require('../database/db').getData().banned || {}));
+app.post('/api/banned/add', auth, (req, res) => {
+  const db = require('../database/db'), j = norm(req.body.jid);
+  if (!j) return res.status(400).json({ error: 'JID requis.' });
+  db.banUser(j, req.body.reason || 'Via panel'); res.json({ message: '🚫 Banni: ' + j });
+});
+app.post('/api/banned/remove', auth, (req, res) => {
+  const db = require('../database/db'), j = norm(req.body.jid);
+  if (!j) return res.status(400).json({ error: 'JID requis.' });
+  db.unbanUser(j); res.json({ message: '✅ Débanni: ' + j });
 });
 
-app.get('/api/banned', authMiddleware, (req, res) => {
-  res.json(require('../database/db').getData().banned || {});
-});
-
-app.post('/api/banned/add', authMiddleware, (req, res) => {
-  const db = require('../database/db');
-  const { jid, reason } = req.body;
-  if (!jid) return res.status(400).json({ error: 'JID requis.' });
-  const j = jid.includes('@') ? jid : jid.replace(/\D/g,'') + '@s.whatsapp.net';
-  db.banUser(j, reason || 'Via admin panel');
-  res.json({ message: `🚫 Banni: ${j}` });
-});
-
-app.post('/api/banned/remove', authMiddleware, (req, res) => {
-  const db = require('../database/db');
-  const { jid } = req.body;
-  if (!jid) return res.status(400).json({ error: 'JID requis.' });
-  const j = jid.includes('@') ? jid : jid.replace(/\D/g,'') + '@s.whatsapp.net';
-  db.unbanUser(j);
-  res.json({ message: `✅ Débanni: ${j}` });
-});
-
-app.post('/api/broadcast', authMiddleware, async (req, res) => {
-  const db = require('../database/db');
+app.post('/api/broadcast', auth, async (req, res) => {
   const { message } = req.body;
   if (!message) return res.status(400).json({ error: 'Message requis.' });
   if (!_sock || !_connected) return res.status(503).json({ error: 'Bot non connecté.' });
-  const users = Object.keys(db.getData().users || {});
+  const users = Object.keys(require('../database/db').getData().users || {});
   let sent = 0, failed = 0;
   for (const jid of users) {
-    try {
-      await _sock.sendMessage(jid, { text: `📢 *Annonce LUCIFERO*\n\n${message}` });
-      sent++;
-      await new Promise(r => setTimeout(r, 800));
-    } catch { failed++; }
+    try { await _sock.sendMessage(jid, { text: `📢 *Annonce LUCIFERO*\n\n${message}` }); sent++; await new Promise(r => setTimeout(r, 800)); }
+    catch { failed++; }
   }
-  res.json({ message: `📢 Broadcast: ${sent} envoyés, ${failed} échecs.` });
+  res.json({ message: `📢 ${sent} envoyés, ${failed} échecs.` });
 });
 
-app.post('/api/coins', authMiddleware, (req, res) => {
-  const db = require('../database/db');
-  const { jid, amount } = req.body;
-  if (!jid || !amount) return res.status(400).json({ error: 'JID et montant requis.' });
-  const j = jid.includes('@') ? jid : jid.replace(/\D/g,'') + '@s.whatsapp.net';
-  const newBalance = db.addCoins(j, parseInt(amount));
-  res.json({ message: `💰 ${amount} coins — Solde: ${newBalance}` });
-});
-
-app.post('/api/send', authMiddleware, async (req, res) => {
+app.post('/api/send', auth, async (req, res) => {
   const { jid, message } = req.body;
   if (!jid || !message) return res.status(400).json({ error: 'JID et message requis.' });
   if (!_sock || !_connected) return res.status(503).json({ error: 'Bot non connecté.' });
-  const j = jid.includes('@') ? jid : jid.replace(/\D/g,'') + '@s.whatsapp.net';
-  try {
-    await _sock.sendMessage(j, { text: message });
-    res.json({ message: `✅ Envoyé à ${j}` });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  try { await _sock.sendMessage(norm(jid), { text: message }); res.json({ message: '✅ Envoyé' }); }
+  catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/restart', authMiddleware, (req, res) => {
-  res.json({ message: '🔄 Redémarrage en cours...' });
+app.post('/api/coins', auth, (req, res) => {
+  const db = require('../database/db'), j = norm(req.body.jid), a = parseInt(req.body.amount);
+  if (!j || isNaN(a)) return res.status(400).json({ error: 'JID et montant requis.' });
+  res.json({ message: `💰 Solde: ${db.addCoins(j, a)}` });
+});
+
+app.post('/api/restart', auth, (req, res) => {
+  res.json({ message: '🔄 Redémarrage...' });
   setTimeout(() => process.exit(0), 500);
 });
 
-app.get('/api/users', authMiddleware, (req, res) => {
-  const db   = require('../database/db');
-  const data = db.getData();
-  const users = Object.entries(data.users || {}).map(([jid, info]) => ({
-    jid,
-    lastSeen: info.lastSeen || null,
-    isVip:    !!(data.vip || {})[jid],
-    isBanned: !!(data.banned || {})[jid],
-    coins:    (data.economy || {})[jid]?.coins || 0,
-  }));
-  res.json(users.slice(0, 200));
-});
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function norm(jid) { if (!jid) return null; return jid.includes('@') ? jid : jid.replace(/\D/g,'') + '@s.whatsapp.net'; }
+function fmtUptime(s) { return `${Math.floor(s/3600)}h ${Math.floor((s%3600)/60)}m ${Math.floor(s%60)}s`; }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function formatUptime(seconds) {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  return `${h}h ${m}m ${s}s`;
-}
-
-// ─── Exports ──────────────────────────────────────────────────────────────────
+// ── Exports ───────────────────────────────────────────────────────────────────
 function startWebServer(port = 3000) {
   app.listen(port, '0.0.0.0', () => {
     console.log(`\n🌐 Dashboard: http://localhost:${port}`);
-    console.log(`🔑 Mot de passe admin: ${process.env.ADMIN_PASSWORD || 'lucifer2024'}`);
-    console.log(`📲 Entrez votre numéro sur le dashboard pour connecter le bot\n`);
+    console.log(`🔑 Mot de passe: ${process.env.ADMIN_PASSWORD || 'lucifer2024'}\n`);
   });
 }
+function setSocket(s)        { _sock = s; }
+function setConnected(v)     { _connected = v; }
+function setPairCodeFn(fn)   { _pairCodeFn = fn; }
+function setGetLastCodeFn(fn){ _getLastCodeFn = fn; }
+function setPendingCode(c)   { _pendingCode = { code: c, formatted: c.match(/.{1,4}/g)?.join('-') || c, time: Date.now() }; }
 
-function setSocket(sock)       { _sock = sock; }
-function setConnected(val)     { _connected = val; }
-function setPairCodeFn(fn)     { _pairCodeFn = fn; }
-
-module.exports = { startWebServer, setSocket, setConnected, setPairCodeFn };
+module.exports = { startWebServer, setSocket, setConnected, setPairCodeFn, setGetLastCodeFn, setPendingCode };
