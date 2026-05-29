@@ -12,6 +12,7 @@ const pino    = require('pino');
 const { Boom } = require('@hapi/boom');
 const http    = require('http');
 const path    = require('path');
+const fs      = require('fs-extra');
 const config  = require('../config/config');
 const { loadPlugins } = require('./plugins');
 const { smsg }        = require('./utils');
@@ -26,20 +27,75 @@ const logger = pino({
 const BOT_BANNER = `
 ╔══════════════════════════════════════╗
 ║   𓅂𝐃𝚯𝐌𝚫 𝐋𝐔𝐂𝐈𝐅𝚵𝐑𝚯𓅂               ║
-║   v${config.VERSION} | 684+ Cmds | IA | Web   ║
+║   v${config.VERSION} | 700+ Cmds | IA | Web   ║
 ╚══════════════════════════════════════╝`;
 
 const channelPromoSent = new Set();
 
-// ── Socket global (partagé avec l'API interne et le web) ─────────────────────
-let globalSock = null;
-let botConnected = false;
+// ── État global du bot ────────────────────────────────────────────────────────
+let globalSock        = null;
+let botConnected      = false;
 let reconnectAttempts = 0;
-const MAX_RECONNECT = 10;
+const MAX_RECONNECT   = 10;
 
-// ── API interne (même processus — partagé via module) ─────────────────────────
-// Le web/server.js accède au socket via setSocket() — plus besoin de port séparé
-// Conservé pour compatibilité avec le panel SaaS externe (port 3500)
+// ── Pair Code: demande asynchrone via dashboard ───────────────────────────────
+// Le socket DOIT avoir reçu l'événement QR avant qu'on puisse demander le code.
+// pendingPairPhone est stocké ici; quand QR arrive, on appelle requestPairingCode.
+let pendingPairPhone   = null;
+let pairCodeResolve    = null;
+let pairCodeReject     = null;
+let socketReadyForPair = false;  // true dès le 1er événement QR reçu
+
+/**
+ * Demande le pair code WhatsApp.
+ * Appelé depuis web/server.js via web.setPairCodeFn().
+ * Attend que le socket soit prêt (événement QR) si nécessaire.
+ */
+async function requestPairCode(phone) {
+  if (botConnected) {
+    throw new Error('Bot déjà connecté à WhatsApp.');
+  }
+  if (!globalSock) {
+    throw new Error('Bot en démarrage, patientez 15-20 secondes puis réessayez.');
+  }
+
+  const cleanPhone = phone.replace(/[^0-9]/g, '');
+  if (cleanPhone.length < 7) {
+    throw new Error('Numéro invalide. Format: indicatif + numéro (ex: 584265781353)');
+  }
+
+  // Si le socket est déjà en état "attente d'authentification" → appel direct
+  if (socketReadyForPair) {
+    logger.info(`📲 Pair code demandé pour: ${cleanPhone}`);
+    const code = await globalSock.requestPairingCode(cleanPhone);
+    logger.info(`✅ Pair code généré: ${code}`);
+    return code;
+  }
+
+  // Sinon: stocker et attendre l'événement QR (max 45s)
+  logger.info(`⏳ En attente que le socket soit prêt pour: ${cleanPhone}`);
+  return new Promise((resolve, reject) => {
+    pendingPairPhone = cleanPhone;
+    pairCodeResolve  = resolve;
+    pairCodeReject   = reject;
+
+    const timeout = setTimeout(() => {
+      if (pairCodeResolve) {
+        pairCodeReject(new Error(
+          'Timeout: le socket n\'est pas encore prêt. ' +
+          'Attendez que le bot soit complètement démarré (20-30s) puis réessayez.'
+        ));
+        pendingPairPhone = pairCodeResolve = pairCodeReject = null;
+      }
+    }, 45000);
+
+    // Cleanup si résolu avant timeout
+    const origResolve = resolve;
+    pairCodeResolve = (val) => { clearTimeout(timeout); origResolve(val); };
+  });
+}
+
+// ── API interne SaaS (port 3500) ──────────────────────────────────────────────
 function startInternalApi() {
   const PORT = parseInt(process.env.INTERNAL_API_PORT) || 3500;
   const server = http.createServer(async (req, res) => {
@@ -59,30 +115,6 @@ function startInternalApi() {
       let payload = {};
       try { payload = body ? JSON.parse(body) : {}; } catch {}
 
-      if (req.method === 'POST' && req.url === '/paircode') {
-        if (!globalSock) {
-          res.writeHead(503);
-          return res.end(JSON.stringify({ error: 'Bot non démarré.' }));
-        }
-        if (botConnected) {
-          res.writeHead(400);
-          return res.end(JSON.stringify({ error: 'Bot déjà connecté.' }));
-        }
-        const phone = (payload.phone || '').replace(/\D/g, '');
-        if (!phone || phone.length < 7) {
-          res.writeHead(400);
-          return res.end(JSON.stringify({ error: 'Numéro invalide.' }));
-        }
-        try {
-          const code = await globalSock.requestPairingCode(phone);
-          res.writeHead(200);
-          return res.end(JSON.stringify({ code, phone, message: 'Code généré.' }));
-        } catch (err) {
-          res.writeHead(500);
-          return res.end(JSON.stringify({ error: err.message }));
-        }
-      }
-
       if (req.method === 'GET' && req.url === '/status') {
         res.writeHead(200);
         return res.end(JSON.stringify({
@@ -94,14 +126,23 @@ function startInternalApi() {
       }
 
       if (req.method === 'POST' && req.url === '/send') {
-        if (!globalSock || !botConnected) { res.writeHead(503); return res.end(JSON.stringify({ error: 'Bot non connecté.' })); }
+        if (!globalSock || !botConnected) {
+          res.writeHead(503);
+          return res.end(JSON.stringify({ error: 'Bot non connecté.' }));
+        }
         const { jid, message } = payload;
-        if (!jid || !message) { res.writeHead(400); return res.end(JSON.stringify({ error: 'jid et message requis.' })); }
+        if (!jid || !message) {
+          res.writeHead(400);
+          return res.end(JSON.stringify({ error: 'jid et message requis.' }));
+        }
         try {
           await globalSock.sendMessage(jid, { text: message });
           res.writeHead(200);
           return res.end(JSON.stringify({ success: true }));
-        } catch (err) { res.writeHead(500); return res.end(JSON.stringify({ error: err.message })); }
+        } catch (err) {
+          res.writeHead(500);
+          return res.end(JSON.stringify({ error: err.message }));
+        }
       }
 
       if (req.method === 'POST' && req.url === '/restart') {
@@ -117,24 +158,26 @@ function startInternalApi() {
   });
 
   server.listen(PORT, '127.0.0.1', () => {
-    logger.info(`🔌 API interne panel — localhost:${PORT}`);
+    logger.info(`🔌 API interne — localhost:${PORT}`);
   });
 }
 
 async function startBot() {
-  const { state, saveCreds } = await useMultiFileAuthState(
-    path.join(__dirname, '..', config.SESSION_NAME)
-  );
+  const sessionDir = path.join(__dirname, '..', config.SESSION_NAME);
+  const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
   const { version } = await fetchLatestBaileysVersion();
   console.log(BOT_BANNER);
-  logger.info(`📱 WhatsApp v${version.join('.')}`);
+  logger.info(`📱 WhatsApp v${version.join('.')} | Session: ${sessionDir}`);
+
+  // Réinitialiser l'état pair code à chaque démarrage
+  socketReadyForPair = false;
 
   const sock = makeWASocket({
     version,
     logger: pino({ level: 'silent' }),
-    printQRInTerminal: false,   // ✅ FIX: désactivé pour utiliser le Pair Code uniquement
+    printQRInTerminal: false,
     auth: state,
-    browser: ['𝐋𝐔𝐂𝐈𝐅𝚵𝐑𝚯', 'Chrome', '20.0.0'],
+    browser: ['Ubuntu', 'Chrome', '20.0.0'],
     markOnlineOnConnect: true,
     syncFullHistory: false,
     getMessage: async (key) => {
@@ -143,20 +186,43 @@ async function startBot() {
     },
   });
 
-  // Expose le socket IMMÉDIATEMENT pour que le dashboard puisse générer le pair code
   globalSock = sock;
   store.bind(sock.ev);
+
+  // ── Partager le socket ET la fonction pair code avec le web server ──────────
   web.setSocket(sock);
+  web.setPairCodeFn(requestPairCode);
 
   sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
+
+    // ── QR reçu = socket prêt pour l'authentification ──────────────────────
     if (qr) {
-      // Socket prêt pour le pair code — le dashboard peut maintenant appeler /api/paircode
-      logger.info(`📲 Prêt pour connexion via Pair Code — Dashboard: http://localhost:${process.env.WEB_PORT || 3000}`);
-      logger.info(`   Entrez votre numéro sur le dashboard pour recevoir le code.`);
+      socketReadyForPair = true;
+      logger.info(`📲 Socket prêt — En attente de connexion via Pair Code`);
+      logger.info(`   Dashboard: http://localhost:${process.env.WEB_PORT || 3000}`);
+
+      // Si une demande de pair code est en attente → traiter maintenant
+      if (pendingPairPhone && pairCodeResolve) {
+        logger.info(`🔑 Génération du pair code pour: ${pendingPairPhone}`);
+        try {
+          const code = await sock.requestPairingCode(pendingPairPhone);
+          logger.info(`✅ Code généré: ${code}`);
+          const resolve = pairCodeResolve;
+          pendingPairPhone = pairCodeResolve = pairCodeReject = null;
+          resolve(code);
+        } catch (err) {
+          logger.error(`❌ Erreur pair code: ${err.message}`);
+          const reject = pairCodeReject;
+          pendingPairPhone = pairCodeResolve = pairCodeReject = null;
+          reject(err);
+        }
+      }
     }
 
+    // ── Déconnexion ────────────────────────────────────────────────────────
     if (connection === 'close') {
-      botConnected = false;
+      botConnected      = false;
+      socketReadyForPair = false;
       web.setConnected(false);
       globalSock = null;
 
@@ -165,38 +231,38 @@ async function startBot() {
 
       if (shouldReconnect && reconnectAttempts < MAX_RECONNECT) {
         reconnectAttempts++;
-        const delay = Math.min(1000 * 2 ** reconnectAttempts, 30000); // backoff exponentiel
+        const delay = Math.min(1000 * 2 ** reconnectAttempts, 30000);
         logger.info(`🔄 Reconnexion ${reconnectAttempts}/${MAX_RECONNECT} dans ${delay/1000}s...`);
         setTimeout(startBot, delay);
       } else if (statusCode === DisconnectReason.loggedOut) {
-        logger.error('⛔ Déconnecté (déconnexion manuelle). Supprimez le dossier session et redémarrez.');
+        logger.error('⛔ Déconnecté. Nettoyez la session et redémarrez.');
         web.setSocket(null);
+        web.setConnected(false);
       } else {
-        logger.error('⛔ Impossible de se reconnecter après plusieurs tentatives.');
+        logger.error('⛔ Impossible de se reconnecter.');
       }
 
+    // ── Connecté ───────────────────────────────────────────────────────────
     } else if (connection === 'open') {
-      botConnected = true;
+      botConnected      = true;
+      socketReadyForPair = false;
       reconnectAttempts = 0;
       web.setConnected(true);
-      const botNum = sock.user?.id?.split(':')[0];
+      const botNum  = sock.user?.id?.split(':')[0];
       const botName = sock.user?.name || config.BOT_NAME;
       logger.info(`✅ ${botName} (${botNum}) connecté!`);
       logger.info(`🌐 Dashboard: http://localhost:${process.env.WEB_PORT || 3000}`);
-      logger.info(`📊 Panel SaaS: http://localhost:${process.env.PANEL_PORT || 4000}`);
     }
   });
 
   sock.ev.on('creds.update', saveCreds);
 
-  // ── Auto-vue des statuts ────────────────────────────────────────────────────
+  // ── Auto-vue statuts ────────────────────────────────────────────────────────
   if (process.env.AUTO_VIEW_STATUS === 'true') {
     sock.ev.on('messages.upsert', async ({ messages }) => {
       for (const msg of messages) {
         if (msg.key?.remoteJid === 'status@broadcast' && !msg.key.fromMe) {
-          try {
-            await sock.readMessages([msg.key]);
-          } catch {}
+          try { await sock.readMessages([msg.key]); } catch {}
         }
       }
     });
@@ -207,7 +273,7 @@ async function startBot() {
 
   let welcomePlugin, channelPlugin;
   try { welcomePlugin = require('../plugins/21_welcome_bye'); } catch {}
-  try { channelPlugin  = require('../plugins/31_channel'); } catch {}
+  try { channelPlugin  = require('../plugins/31_channel'); }   catch {}
 
   sock.ev.on('group-participants.update', async ({ id: groupId, participants, action }) => {
     try {
@@ -268,11 +334,11 @@ async function startBot() {
       logger.info(`💬 ${config.PREFIX}${command} | ${senderJid}`);
       const plugin = plugins.get(command);
       if (plugin) {
-        if (plugin.vipOnly && !isVip) return await m.reply(`👑 *Commande VIP!*\nContactez: wa.me/${config.OWNER_NUMBER}`);
+        if (plugin.vipOnly  && !isVip)   return await m.reply(`👑 *Commande VIP!*\nContactez: wa.me/${config.OWNER_NUMBER}`);
         if (plugin.ownerOnly && !isOwner) return await m.reply(`🔱 *Commande propriétaire uniquement!*`);
         await plugin.execute({ sock, m, args, q, isOwner, isVip, config, logger, db });
       } else {
-        await m.reply(`❌ Commande *${config.PREFIX}${command}* inconnue.\nTapez *${config.PREFIX}menu* pour voir toutes les commandes.`);
+        await m.reply(`❌ Commande *${config.PREFIX}${command}* inconnue.\nTapez *${config.PREFIX}menu* pour la liste.`);
       }
     } catch (err) { logger.error('Erreur handler:', err.message); }
   });
