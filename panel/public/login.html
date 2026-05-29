@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>𓅂 LUCIFERO — Connexion / Inscription</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; }
+    body::before { content:''; position:fixed; inset:0; background:radial-gradient(ellipse at 20% 50%,rgba(139,0,0,.12) 0%,transparent 60%),radial-gradient(ellipse at 80% 20%,rgba(255,215,0,.06) 0%,transparent 50%); pointer-events:none; }
+    .auth-container { width:100%; max-width:420px; }
+    .auth-logo { text-align:center; margin-bottom:32px; }
+    .auth-logo h1 { font-size:1.8rem; background:linear-gradient(90deg,#cc0000,#ffd700,#cc0000); background-size:200%; -webkit-background-clip:text; -webkit-text-fill-color:transparent; animation:shimmer 3s linear infinite; }
+    .auth-logo p { color:var(--dim); font-size:13px; margin-top:4px; }
+    .auth-tabs { display:flex; background:var(--card2); border-radius:10px; padding:4px; margin-bottom:24px; }
+    .auth-tab { flex:1; padding:10px; text-align:center; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600; color:var(--dim); transition:all .2s; }
+    .auth-tab.active { background:var(--accent); color:#fff; }
+    .auth-form { display:none; }
+    .auth-form.active { display:block; }
+    .divider { text-align:center; color:var(--dim); font-size:12px; margin:16px 0; position:relative; }
+    .divider::before,.divider::after { content:''; position:absolute; top:50%; width:42%; height:1px; background:var(--border); }
+    .divider::before { left:0; }
+    .divider::after { right:0; }
+    .back-link { text-align:center; margin-top:20px; font-size:13px; color:var(--dim); }
+  </style>
+</head>
+<body>
+<div class="auth-container">
+  <div class="auth-logo">
+    <h1>𓅂𝐃𝚯𝐌𝚫 𝐋𝐔𝐂𝐈𝐅𝚵𝐑𝚯𓅂</h1>
+    <p>Panel Bot WhatsApp • 684+ Commandes</p>
+  </div>
+
+  <!-- Canal banner -->
+  <div class="channel-banner" style="margin-bottom:20px">
+    <span class="channel-banner-text">📺 <strong>Doma Lucifero Tech</strong> — Canal officiel</span>
+    <a href="https://whatsapp.com/channel/0029VbCK9wyCXC3JTDw6H51c" target="_blank" class="btn btn-gold btn-sm">Suivre</a>
+  </div>
+
+  <div class="card">
+    <div class="auth-tabs">
+      <div class="auth-tab active" onclick="switchTab('login')">Se connecter</div>
+      <div class="auth-tab" onclick="switchTab('register')">S'inscrire</div>
+    </div>
+
+    <!-- LOGIN -->
+    <form id="loginForm" class="auth-form active" onsubmit="doLogin(event)">
+      <div id="loginAlert"></div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-input" id="loginEmail" placeholder="votre@email.com" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mot de passe</label>
+        <input type="password" class="form-input" id="loginPass" placeholder="••••••••" required>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full" id="loginBtn">Se connecter</button>
+    </form>
+
+    <!-- REGISTER -->
+    <form id="registerForm" class="auth-form" onsubmit="doRegister(event)">
+      <div id="registerAlert"></div>
+      <div class="form-group">
+        <label class="form-label">Nom complet</label>
+        <input type="text" class="form-input" id="regName" placeholder="Votre nom" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-input" id="regEmail" placeholder="votre@email.com" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mot de passe</label>
+        <input type="password" class="form-input" id="regPass" placeholder="Minimum 6 caractères" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Confirmer le mot de passe</label>
+        <input type="password" class="form-input" id="regPass2" placeholder="Répétez le mot de passe" required>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full" id="registerBtn">Créer mon compte</button>
+    </form>
+  </div>
+
+  <div class="back-link">
+    <a href="/">← Retour à l'accueil</a>
+  </div>
+</div>
+
+<script>
+const API = '/api';
+
+// Redirect if already logged in
+const token = localStorage.getItem('panelToken');
+if (token) fetch(`${API}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+  .then(r => r.json()).then(d => { if (d.user) window.location.href = d.user.isAdmin ? '/admin' : '/dashboard'; });
+
+function switchTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='register')));
+  document.getElementById('loginForm').classList.toggle('active', tab==='login');
+  document.getElementById('registerForm').classList.toggle('active', tab==='register');
+}
+
+async function doLogin(e) {
+  e.preventDefault();
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = 'Connexion...';
+  const res = await fetch(`${API}/auth/login`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ email: document.getElementById('loginEmail').value, password: document.getElementById('loginPass').value })
+  });
+  const data = await res.json();
+  if (data.token) {
+    localStorage.setItem('panelToken', data.token);
+    localStorage.setItem('panelUser', JSON.stringify(data.user));
+    showAlert('loginAlert', data.message, 'success');
+    setTimeout(() => window.location.href = data.user.isAdmin ? '/admin' : '/dashboard', 800);
+  } else {
+    showAlert('loginAlert', data.error, 'error');
+    btn.disabled = false; btn.textContent = 'Se connecter';
+  }
+}
+
+async function doRegister(e) {
+  e.preventDefault();
+  const pass = document.getElementById('regPass').value;
+  const pass2 = document.getElementById('regPass2').value;
+  if (pass !== pass2) return showAlert('registerAlert', 'Les mots de passe ne correspondent pas.', 'error');
+  const btn = document.getElementById('registerBtn');
+  btn.disabled = true; btn.textContent = 'Création...';
+  const res = await fetch(`${API}/auth/register`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ name: document.getElementById('regName').value, email: document.getElementById('regEmail').value, password: pass })
+  });
+  const data = await res.json();
+  if (data.token) {
+    localStorage.setItem('panelToken', data.token);
+    localStorage.setItem('panelUser', JSON.stringify(data.user));
+    showAlert('registerAlert', data.message, 'success');
+    setTimeout(() => window.location.href = '/dashboard', 800);
+  } else {
+    showAlert('registerAlert', data.error, 'error');
+    btn.disabled = false; btn.textContent = 'Créer mon compte';
+  }
+}
+
+function showAlert(id, msg, type) {
+  const el = document.getElementById(id);
+  if(el) { el.innerHTML = `<div class="alert alert-${type}">${msg}</div>`; }
+}
+</script>
+</body>
+</html>
