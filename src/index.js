@@ -10,7 +10,6 @@ const {
 
 const pino    = require('pino');
 const { Boom } = require('@hapi/boom');
-const QRCode  = require('qrcode');
 const http    = require('http');
 const path    = require('path');
 const config  = require('../config/config');
@@ -32,20 +31,21 @@ const BOT_BANNER = `
 
 const channelPromoSent = new Set();
 
-// ── Socket global (partagé avec l'API interne) ────────────────────────────────
+// ── Socket global (partagé avec l'API interne et le web) ─────────────────────
 let globalSock = null;
 let botConnected = false;
+let reconnectAttempts = 0;
+const MAX_RECONNECT = 10;
 
-// ── API interne (localhost:3500) — utilisée par le panel SaaS ─────────────────
-// Permet de générer des pair codes depuis le dashboard web
+// ── API interne (même processus — partagé via module) ─────────────────────────
+// Le web/server.js accède au socket via setSocket() — plus besoin de port séparé
+// Conservé pour compatibilité avec le panel SaaS externe (port 3500)
 function startInternalApi() {
   const PORT = parseInt(process.env.INTERNAL_API_PORT) || 3500;
-
   const server = http.createServer(async (req, res) => {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Origin', '*');
 
-    // Vérification du token interne
     const authHeader = req.headers['x-internal-token'] || '';
     const validToken = process.env.INTERNAL_TOKEN || 'lucifer-internal-2024';
     if (authHeader !== validToken) {
@@ -55,39 +55,34 @@ function startInternalApi() {
 
     let body = '';
     req.on('data', d => (body += d));
-
     req.on('end', async () => {
       let payload = {};
       try { payload = body ? JSON.parse(body) : {}; } catch {}
 
-      // ── POST /paircode — Générer un code de liaison ────────────────────────
       if (req.method === 'POST' && req.url === '/paircode') {
         if (!globalSock) {
           res.writeHead(503);
-          return res.end(JSON.stringify({ error: 'Bot non démarré. Lancez npm start d\'abord.' }));
+          return res.end(JSON.stringify({ error: 'Bot non démarré.' }));
         }
         if (botConnected) {
           res.writeHead(400);
-          return res.end(JSON.stringify({ error: 'Bot déjà connecté. Déconnectez d\'abord.' }));
+          return res.end(JSON.stringify({ error: 'Bot déjà connecté.' }));
         }
         const phone = (payload.phone || '').replace(/\D/g, '');
         if (!phone || phone.length < 7) {
           res.writeHead(400);
-          return res.end(JSON.stringify({ error: 'Numéro de téléphone invalide.' }));
+          return res.end(JSON.stringify({ error: 'Numéro invalide.' }));
         }
         try {
-          logger.info(`📲 Génération code pour ${phone}...`);
           const code = await globalSock.requestPairingCode(phone);
-          logger.info(`✅ Code généré: ${code}`);
           res.writeHead(200);
-          return res.end(JSON.stringify({ code, phone, message: 'Code généré. Entrez-le dans WhatsApp → Appareils liés → Lier avec numéro.' }));
+          return res.end(JSON.stringify({ code, phone, message: 'Code généré.' }));
         } catch (err) {
           res.writeHead(500);
-          return res.end(JSON.stringify({ error: 'Erreur: ' + err.message + '. Assurez-vous que le bot est démarré sans session existante.' }));
+          return res.end(JSON.stringify({ error: err.message }));
         }
       }
 
-      // ── GET /status — Statut du bot ────────────────────────────────────────
       if (req.method === 'GET' && req.url === '/status') {
         res.writeHead(200);
         return res.end(JSON.stringify({
@@ -98,32 +93,21 @@ function startInternalApi() {
         }));
       }
 
-      // ── POST /send — Envoyer un message (broadcast admin) ─────────────────
       if (req.method === 'POST' && req.url === '/send') {
-        if (!globalSock || !botConnected) {
-          res.writeHead(503);
-          return res.end(JSON.stringify({ error: 'Bot non connecté.' }));
-        }
+        if (!globalSock || !botConnected) { res.writeHead(503); return res.end(JSON.stringify({ error: 'Bot non connecté.' })); }
         const { jid, message } = payload;
-        if (!jid || !message) {
-          res.writeHead(400);
-          return res.end(JSON.stringify({ error: 'jid et message requis.' }));
-        }
+        if (!jid || !message) { res.writeHead(400); return res.end(JSON.stringify({ error: 'jid et message requis.' })); }
         try {
           await globalSock.sendMessage(jid, { text: message });
           res.writeHead(200);
           return res.end(JSON.stringify({ success: true }));
-        } catch (err) {
-          res.writeHead(500);
-          return res.end(JSON.stringify({ error: err.message }));
-        }
+        } catch (err) { res.writeHead(500); return res.end(JSON.stringify({ error: err.message })); }
       }
 
-      // ── POST /restart ──────────────────────────────────────────────────────
       if (req.method === 'POST' && req.url === '/restart') {
         res.writeHead(200);
         res.end(JSON.stringify({ message: 'Redémarrage...' }));
-        setTimeout(() => process.exit(0), 500); // PM2 redémarre automatiquement
+        setTimeout(() => process.exit(0), 500);
         return;
       }
 
@@ -148,40 +132,75 @@ async function startBot() {
   const sock = makeWASocket({
     version,
     logger: pino({ level: 'silent' }),
-    printQRInTerminal: true,
+    printQRInTerminal: false,   // ✅ FIX: désactivé pour utiliser le Pair Code uniquement
     auth: state,
     browser: ['𝐋𝐔𝐂𝐈𝐅𝚵𝐑𝚯', 'Chrome', '20.0.0'],
+    markOnlineOnConnect: true,
+    syncFullHistory: false,
     getMessage: async (key) => {
       const msg = store ? await store.loadMessage(key.remoteJid, key.id) : null;
       return msg?.message || proto.Message.fromObject({});
     },
   });
 
-  // Expose le socket globalement pour l'API interne
+  // Expose le socket IMMÉDIATEMENT pour que le dashboard puisse générer le pair code
   globalSock = sock;
   store.bind(sock.ev);
   web.setSocket(sock);
 
   sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
     if (qr) {
-      logger.info('📲 QR dispo — Dashboard: http://localhost:' + (process.env.WEB_PORT || 3000));
-      try { web.setQr(await QRCode.toDataURL(qr)); } catch { web.setQr(null); }
+      // Socket prêt pour le pair code — le dashboard peut maintenant appeler /api/paircode
+      logger.info(`📲 Prêt pour connexion via Pair Code — Dashboard: http://localhost:${process.env.WEB_PORT || 3000}`);
+      logger.info(`   Entrez votre numéro sur le dashboard pour recevoir le code.`);
     }
+
     if (connection === 'close') {
       botConnected = false;
       web.setConnected(false);
-      const shouldReconnect = new Boom(lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut;
-      if (shouldReconnect) { logger.info('🔄 Reconnexion...'); startBot(); }
-      else logger.error('⛔ Déconnecté. Supprimez le dossier session et redémarrez.');
+      globalSock = null;
+
+      const statusCode = new Boom(lastDisconnect?.error)?.output?.statusCode;
+      const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+
+      if (shouldReconnect && reconnectAttempts < MAX_RECONNECT) {
+        reconnectAttempts++;
+        const delay = Math.min(1000 * 2 ** reconnectAttempts, 30000); // backoff exponentiel
+        logger.info(`🔄 Reconnexion ${reconnectAttempts}/${MAX_RECONNECT} dans ${delay/1000}s...`);
+        setTimeout(startBot, delay);
+      } else if (statusCode === DisconnectReason.loggedOut) {
+        logger.error('⛔ Déconnecté (déconnexion manuelle). Supprimez le dossier session et redémarrez.');
+        web.setSocket(null);
+      } else {
+        logger.error('⛔ Impossible de se reconnecter après plusieurs tentatives.');
+      }
+
     } else if (connection === 'open') {
       botConnected = true;
+      reconnectAttempts = 0;
       web.setConnected(true);
-      logger.info(`✅ ${config.BOT_NAME} connecté ! Dashboard: http://localhost:${process.env.WEB_PORT || 3000}`);
+      const botNum = sock.user?.id?.split(':')[0];
+      const botName = sock.user?.name || config.BOT_NAME;
+      logger.info(`✅ ${botName} (${botNum}) connecté!`);
+      logger.info(`🌐 Dashboard: http://localhost:${process.env.WEB_PORT || 3000}`);
       logger.info(`📊 Panel SaaS: http://localhost:${process.env.PANEL_PORT || 4000}`);
     }
   });
 
   sock.ev.on('creds.update', saveCreds);
+
+  // ── Auto-vue des statuts ────────────────────────────────────────────────────
+  if (process.env.AUTO_VIEW_STATUS === 'true') {
+    sock.ev.on('messages.upsert', async ({ messages }) => {
+      for (const msg of messages) {
+        if (msg.key?.remoteJid === 'status@broadcast' && !msg.key.fromMe) {
+          try {
+            await sock.readMessages([msg.key]);
+          } catch {}
+        }
+      }
+    });
+  }
 
   const plugins = await loadPlugins();
   logger.info(`📦 ${plugins.size} commandes chargées`);
