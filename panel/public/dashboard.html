@@ -5,32 +5,89 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>𓅂 LUCIFERO — Mon Espace</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .paircode-box {
+      background: linear-gradient(135deg,rgba(139,0,0,.15),rgba(0,0,0,.3));
+      border: 2px dashed var(--accent);
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      margin-top: 16px;
+    }
+    .paircode-digits {
+      font-size: 2.8rem;
+      font-weight: 900;
+      letter-spacing: 12px;
+      color: var(--gold);
+      font-family: 'Courier New', monospace;
+      text-shadow: 0 0 20px rgba(255,215,0,.4);
+      margin: 8px 0;
+    }
+    .paircode-timer {
+      font-size: 12px;
+      color: var(--dim);
+      margin-top: 8px;
+    }
+    .step-box {
+      background: var(--card2);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .step-num {
+      background: var(--accent);
+      color: #fff;
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 800;
+      flex-shrink: 0;
+    }
+    .step-text { font-size: 13px; color: var(--text); }
+    .step-text code { color: var(--green); background: rgba(0,230,118,.1); padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+    .bot-status-bar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 16px;
+      background: var(--card2);
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 13px;
+    }
+    .phone-input-wrap { position: relative; }
+    .phone-flag { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 18px; }
+    .phone-input-wrap .form-input { padding-left: 44px; font-size: 1.1rem; letter-spacing: 1px; }
+  </style>
 </head>
 <body>
-<!-- NAVBAR -->
+
 <nav class="navbar">
   <span class="navbar-brand">𓅂𝐃𝚯𝐌𝚫 𝐋𝐔𝐂𝐈𝐅𝚵𝐑𝚯𓅂</span>
   <div class="navbar-links">
     <span id="navUser" style="color:var(--dim);font-size:13px"></span>
+    <span id="navBotStatus" style="font-size:12px"></span>
     <a href="/" class="btn btn-outline btn-sm">Accueil</a>
     <button class="btn btn-danger btn-sm" onclick="logout()">Déconnexion</button>
   </div>
 </nav>
 
 <div class="layout">
-  <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sidebar-item active" onclick="show('bots',this)"><span class="icon">🤖</span> Mes Bots</div>
+    <div class="sidebar-item" onclick="show('connect',this)"><span class="icon">📱</span> Connecter</div>
     <div class="sidebar-item" onclick="show('plans',this)"><span class="icon">💎</span> Plans & Prix</div>
     <div class="sidebar-item" onclick="show('payments',this)"><span class="icon">💳</span> Paiements</div>
     <div class="sidebar-item" onclick="show('support',this)"><span class="icon">🎫</span> Support</div>
     <div class="sidebar-item" onclick="show('account',this)"><span class="icon">👤</span> Mon Compte</div>
     <div style="margin-top:auto;padding-top:20px">
-      <a href="https://whatsapp.com/channel/0029VbCK9wyCXC3JTDw6H51c" target="_blank" class="sidebar-item" style="background:rgba(255,215,0,.1);color:var(--gold)"><span class="icon">📺</span> Canal Officiel</a>
+      <a href="https://whatsapp.com/channel/0029VbCK9wyCXC3JTDw6H51c" target="_blank" class="sidebar-item" style="background:rgba(255,215,0,.1);color:var(--gold)">
+        <span class="icon">📺</span> Canal Officiel
+      </a>
     </div>
   </aside>
 
-  <!-- MAIN -->
   <main class="main-content">
     <div id="globalAlert"></div>
 
@@ -41,6 +98,112 @@
         <button class="btn btn-primary" onclick="openAddBot()">+ Ajouter un Bot</button>
       </div>
       <div id="botsList"><div class="spinner"></div></div>
+    </div>
+
+    <!-- ═══ CONNEXION PAIR CODE ═══ -->
+    <div id="sec-connect" class="section">
+      <h2 style="color:var(--gold);margin-bottom:8px">📱 Connecter le Bot WhatsApp</h2>
+      <p style="color:var(--dim);font-size:13px;margin-bottom:20px">
+        Entrez votre numéro WhatsApp, cliquez sur <strong style="color:var(--gold)">Générer le Code</strong>, puis entrez ce code dans WhatsApp.
+      </p>
+
+      <div class="grid-2">
+        <!-- Formulaire -->
+        <div class="card">
+          <div class="card-title">🔢 Connexion par Code (Recommandé)</div>
+
+          <div id="connectAlert"></div>
+
+          <!-- Statut bot -->
+          <div id="botStatusBar" class="bot-status-bar">
+            <span id="botStatusDot" class="dot" style="color:var(--dim)"></span>
+            <span id="botStatusText" style="color:var(--dim)">Vérification du statut...</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Votre numéro WhatsApp (sans +, sans espaces)</label>
+            <div class="phone-input-wrap">
+              <span class="phone-flag">📱</span>
+              <input type="tel" class="form-input" id="connectPhone"
+                placeholder="Exemple: 22656060976"
+                oninput="this.value=this.value.replace(/\D/g,'')">
+            </div>
+            <div style="font-size:11px;color:var(--dim);margin-top:4px">
+              Exemples: <code style="color:var(--green)">22656060976</code> · <code style="color:var(--green)">584265781353</code> · <code style="color:var(--green)">237600000000</code>
+            </div>
+          </div>
+
+          <button class="btn btn-gold btn-full" id="genCodeBtn" onclick="generatePairCode()" style="font-size:1rem;padding:14px">
+            ⚡ Générer le Code de Liaison
+          </button>
+
+          <!-- Affichage du code -->
+          <div id="pairCodeSection" style="display:none">
+            <div class="paircode-box">
+              <div style="font-size:13px;color:var(--dim);margin-bottom:4px">Votre code de liaison:</div>
+              <div class="paircode-digits" id="pairCodeDisplay">---- ----</div>
+              <div class="paircode-timer" id="pairCodeTimer">⏱️ Valide 60 secondes</div>
+              <button class="btn btn-outline btn-sm" onclick="copyCode()" style="margin-top:10px">📋 Copier le code</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="card">
+          <div class="card-title">📋 Comment utiliser ce code?</div>
+
+          <div class="step-box">
+            <span class="step-num">1</span>
+            <div class="step-text">
+              <strong>Assurez-vous que le bot tourne</strong><br>
+              Sur votre terminal/Termux: <code>pm2 start ecosystem.config.js</code>
+              <br>ou: <code>npm start</code>
+            </div>
+          </div>
+          <div class="step-box">
+            <span class="step-num">2</span>
+            <div class="step-text">
+              <strong>Entrez votre numéro</strong> WhatsApp ci-contre et cliquez sur <span style="color:var(--gold)">Générer le Code</span>
+            </div>
+          </div>
+          <div class="step-box">
+            <span class="step-num">3</span>
+            <div class="step-text">
+              <strong>Ouvrez WhatsApp</strong> sur votre téléphone principal
+              <br>→ <strong>Paramètres</strong> (⚙️)
+              <br>→ <strong>Appareils liés</strong>
+              <br>→ <strong>Lier un appareil</strong>
+              <br>→ <strong>Lier avec un numéro de téléphone</strong>
+            </div>
+          </div>
+          <div class="step-box">
+            <span class="step-num">4</span>
+            <div class="step-text">
+              <strong>Entrez le code à 8 chiffres</strong> qui apparaît ci-contre.<br>
+              Le bot se connecte automatiquement ✅
+            </div>
+          </div>
+          <div class="step-box">
+            <span class="step-num">5</span>
+            <div class="step-text">
+              <strong>Tester:</strong> Envoyez <code>.menu</code> à votre propre numéro — le bot doit répondre avec la liste des commandes.
+            </div>
+          </div>
+
+          <div class="alert alert-info" style="margin-top:12px">
+            💡 <strong>Conseil:</strong> Utilisez un numéro secondaire ou une carte SIM dédiée pour le bot.
+          </div>
+        </div>
+      </div>
+
+      <!-- Fallback QR -->
+      <div class="card" style="margin-top:16px">
+        <div class="card-title">📷 Méthode alternative — QR Code</div>
+        <p style="font-size:13px;color:var(--dim);margin-bottom:12px">
+          Si le code ne fonctionne pas, accédez au dashboard bot pour scanner le QR code directement.
+        </p>
+        <a href="http://localhost:3000" target="_blank" class="btn btn-outline">🔧 Ouvrir le Dashboard Bot (port 3000)</a>
+      </div>
     </div>
 
     <!-- ═══ PLANS ═══ -->
@@ -130,12 +293,12 @@
       <input type="text" class="form-input" id="botName" placeholder="Ex: Mon Bot Perso">
     </div>
     <div class="form-group">
-      <label class="form-label">Numéro WhatsApp du bot</label>
-      <input type="tel" class="form-input" id="botPhone" placeholder="584265781353 (sans +)">
+      <label class="form-label">Numéro du bot (sans +)</label>
+      <input type="tel" class="form-input" id="botPhone" placeholder="22656060976">
     </div>
     <div class="form-group">
-      <label class="form-label">Numéro propriétaire (owner)</label>
-      <input type="tel" class="form-input" id="botOwner" placeholder="584265781353">
+      <label class="form-label">Votre numéro propriétaire (owner)</label>
+      <input type="tel" class="form-input" id="botOwner" placeholder="22656060976">
     </div>
     <div class="form-group">
       <label class="form-label">Préfixe des commandes</label>
@@ -143,28 +306,7 @@
     </div>
     <div style="display:flex;gap:8px;margin-top:16px">
       <button class="btn btn-outline btn-full" onclick="closeModal('addBotModal')">Annuler</button>
-      <button class="btn btn-primary btn-full" onclick="addBot()">Créer le Bot</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: Connexion Bot -->
-<div class="modal-overlay" id="connectModal">
-  <div class="modal" style="max-width:520px">
-    <span class="modal-close" onclick="closeModal('connectModal')">✕</span>
-    <div class="modal-title">📱 Connecter le Bot WhatsApp</div>
-    <div class="alert alert-info" style="margin-bottom:16px">
-      ⚡ Le bot tourne sur votre téléphone/serveur. Suivez les étapes ci-dessous.
-    </div>
-    <div id="connectSteps"></div>
-    <div style="margin-top:20px;padding:16px;background:var(--card2);border-radius:8px">
-      <div style="font-size:13px;color:var(--dim);margin-bottom:8px">🔢 Connexion par code (recommandé)</div>
-      <input type="tel" class="form-input" id="connectPhone" placeholder="Votre numéro (584265781353)" style="margin-bottom:8px">
-      <button class="btn btn-gold btn-full" onclick="genCode()">⚡ Générer le Code de liaison</button>
-      <div id="pairCodeDisplay" style="display:none;margin-top:12px">
-        <div style="font-size:2rem;font-weight:bold;letter-spacing:8px;color:var(--gold);text-align:center;background:rgba(139,0,0,.2);border:2px dashed var(--accent);border-radius:8px;padding:16px;font-family:monospace" id="pairCodeText"></div>
-        <p style="text-align:center;color:var(--dim);font-size:12px;margin-top:8px">WhatsApp → ⚙️ → Appareils liés → Lier avec numéro</p>
-      </div>
+      <button class="btn btn-primary btn-full" onclick="addBot()">Créer le Bot →</button>
     </div>
   </div>
 </div>
@@ -199,10 +341,15 @@
 const API = '/api';
 let token = localStorage.getItem('panelToken');
 let user  = JSON.parse(localStorage.getItem('panelUser') || '{}');
+let pairCodeTimer = null;
 
 if (!token) window.location.href = '/login';
 
-document.getElementById('navUser').textContent = `👋 ${user.name || ''} | Plan: ${user.plan || 'free'}`;
+document.getElementById('navUser').textContent = `👋 ${user.name || ''} | Plan: ${(user.plan||'free').toUpperCase()}`;
+
+// Vérifier le statut du bot au chargement
+checkBotStatus();
+setInterval(checkBotStatus, 15000);
 
 // ── Sections ──────────────────────────────────────────────────────────────────
 function show(name, el) {
@@ -214,7 +361,6 @@ function show(name, el) {
   loaders[name]?.();
 }
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
 async function authFetch(url, opts={}) {
   const res = await fetch(url, { ...opts, headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}`, ...opts.headers } });
   const data = await res.json();
@@ -224,15 +370,119 @@ async function authFetch(url, opts={}) {
 
 function logout() { localStorage.clear(); window.location.href = '/login'; }
 
+// ── Statut du bot ─────────────────────────────────────────────────────────────
+async function checkBotStatus() {
+  try {
+    const data = await authFetch(`${API}/bot-status`);
+    const dot  = document.getElementById('botStatusDot');
+    const text = document.getElementById('botStatusText');
+    const nav  = document.getElementById('navBotStatus');
+    const bar  = document.getElementById('botStatusBar');
+
+    if (data?.connected) {
+      if (dot)  { dot.style.color = 'var(--green)'; dot.classList.add('dot-pulse'); }
+      if (text) text.textContent = `✅ Bot connecté — ${data.phone || ''}`;
+      if (nav)  nav.innerHTML = `<span class="badge badge-green">🟢 Bot actif</span>`;
+      if (bar)  bar.style.borderLeft = '3px solid var(--green)';
+    } else {
+      if (dot)  { dot.style.color = 'var(--red)'; dot.classList.remove('dot-pulse'); }
+      if (text) text.textContent = `🔴 Bot non connecté — Démarrez le bot puis générez un code`;
+      if (nav)  nav.innerHTML = `<span class="badge badge-red">⭕ Bot arrêté</span>`;
+      if (bar)  bar.style.borderLeft = '3px solid var(--red)';
+    }
+  } catch {}
+}
+
+// ── Génération du Pair Code ───────────────────────────────────────────────────
+async function generatePairCode() {
+  const phone = document.getElementById('connectPhone').value.replace(/\D/g,'');
+  const alertEl = document.getElementById('connectAlert');
+  const btn = document.getElementById('genCodeBtn');
+  const section = document.getElementById('pairCodeSection');
+
+  if (!phone || phone.length < 7) {
+    alertEl.innerHTML = `<div class="alert alert-error">❌ Entrez un numéro de téléphone valide (sans +, sans espaces).<br>Exemple: <strong>22656060976</strong></div>`;
+    return;
+  }
+
+  alertEl.innerHTML = '';
+  btn.disabled = true;
+  btn.innerHTML = '⏳ Génération en cours... (peut prendre 10-15s)';
+  section.style.display = 'none';
+
+  try {
+    const res = await fetch(`${API}/paircode`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ phone }),
+    });
+    const data = await res.json();
+
+    if (data.code) {
+      // Afficher le code
+      document.getElementById('pairCodeDisplay').textContent = data.code;
+      section.style.display = 'block';
+      alertEl.innerHTML = `<div class="alert alert-success">✅ Code généré pour le numéro <strong>${phone}</strong></div>`;
+
+      // Compte à rebours 60s
+      let seconds = 60;
+      if (pairCodeTimer) clearInterval(pairCodeTimer);
+      pairCodeTimer = setInterval(() => {
+        seconds--;
+        const timerEl = document.getElementById('pairCodeTimer');
+        if (timerEl) timerEl.textContent = `⏱️ Code valide encore ${seconds}s`;
+        if (seconds <= 0) {
+          clearInterval(pairCodeTimer);
+          document.getElementById('pairCodeDisplay').textContent = 'EXPIRÉ';
+          if (timerEl) timerEl.textContent = '⚠️ Code expiré — Cliquez à nouveau pour en générer un nouveau';
+        }
+      }, 1000);
+
+      // Vérifier la connexion automatiquement
+      let checkCount = 0;
+      const checkConn = setInterval(async () => {
+        checkCount++;
+        await checkBotStatus();
+        const statusText = document.getElementById('botStatusText')?.textContent || '';
+        if (statusText.includes('connecté')) {
+          clearInterval(checkConn);
+          clearInterval(pairCodeTimer);
+          alertEl.innerHTML = `<div class="alert alert-success">🎉 Bot connecté avec succès! Envoyez <strong>.menu</strong> à votre numéro pour tester.</div>`;
+        }
+        if (checkCount >= 12) clearInterval(checkConn); // Stop après 60s
+      }, 5000);
+
+    } else {
+      alertEl.innerHTML = `<div class="alert alert-error">
+        ❌ ${data.error || 'Erreur inconnue'}
+        ${data.hint ? `<br><small style="opacity:.8">💡 ${data.hint}</small>` : ''}
+      </div>`;
+    }
+  } catch (err) {
+    alertEl.innerHTML = `<div class="alert alert-error">❌ Connexion impossible. Assurez-vous que le bot est démarré:<br><code>pm2 start ecosystem.config.js</code> ou <code>npm start</code></div>`;
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '⚡ Générer le Code de Liaison';
+}
+
+function copyCode() {
+  const code = document.getElementById('pairCodeDisplay').textContent.replace(/-/g,'');
+  navigator.clipboard.writeText(code).then(() => showGlobal('Code copié!', 'success'));
+}
+
 // ── Bots ──────────────────────────────────────────────────────────────────────
 async function loadBots() {
   const bots = await authFetch(`${API}/bots`);
-  const el = document.getElementById('botsList');
+  const el   = document.getElementById('botsList');
   if (!bots?.length) {
     el.innerHTML = `<div class="card" style="text-align:center;padding:40px">
       <div style="font-size:3rem;margin-bottom:12px">🤖</div>
-      <div style="color:var(--dim)">Aucun bot configuré</div>
-      <button class="btn btn-primary" style="margin-top:16px" onclick="openAddBot()">+ Créer mon premier bot</button>
+      <div style="color:var(--dim);margin-bottom:16px">Aucun bot configuré</div>
+      <button class="btn btn-primary" onclick="openAddBot()">+ Créer mon premier bot</button>
+      <div style="margin-top:12px">
+        <button class="btn btn-gold btn-sm" onclick="show('connect',document.querySelectorAll('.sidebar-item')[1])">📱 Connecter un bot existant</button>
+      </div>
     </div>`;
     return;
   }
@@ -240,23 +490,22 @@ async function loadBots() {
 }
 
 function botCard(b) {
-  const statusColor = b.status === 'running' ? 'var(--green)' : b.status === 'connecting' ? 'var(--gold)' : 'var(--dim)';
-  const statusLabel = b.status === 'running' ? '🟢 Connecté' : b.status === 'connecting' ? '🟡 Connexion...' : '🔴 Arrêté';
+  const sc = b.status === 'running' ? 'var(--green)' : b.status === 'connecting' ? 'var(--gold)' : 'var(--dim)';
+  const sl = b.status === 'running' ? '🟢 Connecté' : b.status === 'connecting' ? '🟡 En cours...' : '🔴 Arrêté';
   return `<div class="card">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-      <div>
-        <div style="font-weight:700;font-size:1rem">${b.name}</div>
-        <div style="color:var(--dim);font-size:12px">📱 ${b.phone}</div>
-      </div>
-      <span style="color:${statusColor};font-size:12px;font-weight:600">${statusLabel}</span>
+      <div><div style="font-weight:700;font-size:1rem">${b.name}</div>
+           <div style="color:var(--dim);font-size:12px">📱 +${b.phone}</div></div>
+      <span style="color:${sc};font-size:12px;font-weight:600">${sl}</span>
     </div>
     <div style="font-size:12px;color:var(--dim);margin-bottom:16px">
       Préfixe: <code style="color:var(--gold)">${b.prefix}</code> | 
-      Owner: ${b.ownerNumber} | 
-      ${b.commands} commandes
+      Owner: ${b.ownerNumber} | ${b.commands} cmds
     </div>
     <div style="display:flex;gap:8px">
-      <button class="btn btn-primary btn-sm" onclick="openConnect('${b.id}')">📱 Connecter</button>
+      <button class="btn btn-gold btn-sm" onclick="show('connect',document.querySelectorAll('.sidebar-item')[1]);document.getElementById('connectPhone').value='${b.phone}'">
+        📲 Connecter
+      </button>
       <button class="btn btn-outline btn-sm" onclick="deleteBot('${b.id}')">🗑️</button>
     </div>
   </div>`;
@@ -266,17 +515,17 @@ function openAddBot() { document.getElementById('addBotModal').classList.add('op
 
 async function addBot() {
   const bot = await authFetch(`${API}/bots`, {
-    method: 'POST',
+    method:'POST',
     body: JSON.stringify({
-      name: document.getElementById('botName').value,
-      phone: document.getElementById('botPhone').value,
+      name:        document.getElementById('botName').value,
+      phone:       document.getElementById('botPhone').value,
       ownerNumber: document.getElementById('botOwner').value,
-      prefix: document.getElementById('botPrefix').value || '.',
+      prefix:      document.getElementById('botPrefix').value || '.',
     })
   });
   if (bot?.id) {
     closeModal('addBotModal');
-    showGlobal('Bot créé! Connectez-le via le bouton "Connecter".', 'success');
+    showGlobal('Bot créé! Allez dans "Connecter" pour le lier à WhatsApp.', 'success');
     loadBots();
   } else {
     document.getElementById('addBotAlert').innerHTML = `<div class="alert alert-error">${bot?.error}</div>`;
@@ -285,65 +534,27 @@ async function addBot() {
 
 async function deleteBot(id) {
   if (!confirm('Supprimer ce bot?')) return;
-  await authFetch(`${API}/bots/${id}`, { method: 'DELETE' });
+  await authFetch(`${API}/bots/${id}`, { method:'DELETE' });
   loadBots();
-}
-
-function openConnect(botId) {
-  document.getElementById('connectSteps').innerHTML = `
-    <div style="font-size:13px">
-      <div style="margin-bottom:12px;padding:12px;background:var(--card2);border-radius:8px">
-        <strong style="color:var(--gold)">Étape 1</strong> — Ouvrez votre terminal (Termux ou VPS)
-      </div>
-      <div style="margin-bottom:12px;padding:12px;background:var(--card2);border-radius:8px">
-        <strong style="color:var(--gold)">Étape 2</strong> — Allez dans le dossier:<br>
-        <code style="color:var(--green)">cd lucifer-bot</code>
-      </div>
-      <div style="margin-bottom:12px;padding:12px;background:var(--card2);border-radius:8px">
-        <strong style="color:var(--gold)">Étape 3</strong> — Démarrez:<br>
-        <code style="color:var(--green)">npm start</code>
-      </div>
-    </div>`;
-  document.getElementById('connectModal').classList.add('open');
-}
-
-async function genCode() {
-  const phone = document.getElementById('connectPhone').value.replace(/\D/g,'');
-  if (!phone) return;
-  const display = document.getElementById('pairCodeDisplay');
-  const text = document.getElementById('pairCodeText');
-  text.textContent = 'Génération...';
-  display.style.display = 'block';
-  try {
-    const res = await fetch('/api/paircode', {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json', 'x-admin-token': token },
-      body: JSON.stringify({ phone })
-    });
-    const data = await res.json();
-    text.textContent = data.code || 'Erreur — Bot non démarré';
-  } catch {
-    text.textContent = 'Démarrez le bot d\'abord (npm start)';
-  }
 }
 
 // ── Plans ─────────────────────────────────────────────────────────────────────
 async function loadPlans() {
   const plans = await authFetch(`${API}/payments/plans`);
   const el = document.getElementById('plansGrid');
-  el.innerHTML = Object.entries(plans).map(([key, p]) => `
-    <div class="plan-card ${key === 'vip' ? 'featured' : ''}">
-      ${key === 'vip' ? '<div style="color:var(--gold);font-weight:700;font-size:12px;margin-bottom:8px">⭐ POPULAIRE</div>' : ''}
-      <div style="font-size:1.1rem;font-weight:700;margin-bottom:8px">${p.name}</div>
-      <div class="plan-price">${p.price === 0 ? 'GRATUIT' : '$' + p.price}</div>
+  el.innerHTML = Object.entries(plans).filter(([k]) => k !== 'owner').map(([key, p]) => `
+    <div class="plan-card ${key==='vip'?'featured':''}">
+      ${key==='vip'?'<div style="color:var(--gold);font-weight:700;font-size:11px;margin-bottom:6px">⭐ POPULAIRE</div>':''}
+      <div style="font-size:1rem;font-weight:700;margin-bottom:6px">${p.name}</div>
+      <div class="plan-price">${p.price===0?'GRATUIT':'$'+p.price}</div>
       <div class="plan-period">/mois</div>
-      <ul class="plan-features" style="margin:16px 0">
-        ${p.features.map(f => `<li>${f}</li>`).join('')}
-        <li>${p.maxBots} bot(s) maximum</li>
+      <ul class="plan-features" style="margin:12px 0">
+        ${p.features.map(f=>`<li>${f}</li>`).join('')}
+        <li>${p.maxBots} bot(s) max</li>
       </ul>
-      ${key === 'free' 
-        ? `<div class="badge badge-free" style="display:block;text-align:center">Plan actuel</div>`
-        : `<button class="btn btn-${key==='vip'?'gold':'primary'} btn-full" onclick="openPay('${key}','${p.name}','${p.price}')">Choisir ce plan</button>`
+      ${key==='free'
+        ?`<div class="badge badge-free" style="display:block;text-align:center">Plan actuel</div>`
+        :`<button class="btn btn-${key==='vip'?'gold':'primary'} btn-full" onclick="openPay('${key}','${p.name}','${p.price}')">Choisir</button>`
       }
     </div>`).join('');
 }
@@ -356,22 +567,22 @@ function openPay(plan, name, price) {
 }
 
 async function submitPayment() {
-  const plan = document.getElementById('payPlan').value;
-  const method = document.getElementById('payMethod').value;
-  const reference = document.getElementById('payRef').value;
-  const data = await authFetch(`${API}/payments`, { method:'POST', body:JSON.stringify({plan,method,reference}) });
+  const data = await authFetch(`${API}/payments`, {
+    method:'POST',
+    body:JSON.stringify({ plan:document.getElementById('payPlan').value, method:document.getElementById('payMethod').value, reference:document.getElementById('payRef').value })
+  });
   if (data?.payment) {
     const inst = data.instructions;
     document.getElementById('payInstructions').style.display = 'block';
     document.getElementById('payInstructions').innerHTML = `
       <div class="alert alert-info">
-        <div style="font-weight:700;margin-bottom:8px">📋 Instructions de paiement</div>
+        <div style="font-weight:700;margin-bottom:8px">📋 Instructions</div>
         <div>${inst.info}</div>
         <div style="margin-top:4px;font-family:monospace;color:var(--green)">${inst.detail}</div>
         <div style="margin-top:4px;color:var(--dim);font-size:12px">${inst.note}</div>
       </div>
-      <a href="${data.whatsapp}" target="_blank" class="btn btn-green btn-full" style="margin-top:8px">📱 Envoyer la preuve via WhatsApp</a>`;
-    document.getElementById('payAlert').innerHTML = `<div class="alert alert-success">Demande créée! Référence: <strong>${data.payment.id}</strong></div>`;
+      <a href="${data.whatsapp}" target="_blank" class="btn btn-green btn-full" style="margin-top:8px">📱 Envoyer la preuve</a>`;
+    document.getElementById('payAlert').innerHTML = `<div class="alert alert-success">Demande créée! Réf: <strong>${data.payment.id}</strong></div>`;
   } else {
     document.getElementById('payAlert').innerHTML = `<div class="alert alert-error">${data?.error}</div>`;
   }
@@ -384,11 +595,9 @@ async function loadPayments() {
   if (!payments?.length) { el.innerHTML = `<div class="card" style="text-align:center;color:var(--dim);padding:30px">Aucun paiement trouvé</div>`; return; }
   el.innerHTML = `<div class="card"><div class="table-wrap"><table>
     <tr><th>Plan</th><th>Montant</th><th>Méthode</th><th>Statut</th><th>Date</th></tr>
-    ${payments.map(p => `<tr>
-      <td>${p.plan}</td>
-      <td>$${p.amount}</td>
-      <td>${p.method}</td>
-      <td><span class="badge badge-${p.status==='confirmed'?'green':p.status==='pending'?'blue':'red'}">${p.status}</span></td>
+    ${payments.map(p=>`<tr>
+      <td>${p.plan}</td><td>$${p.amount}</td><td>${p.method}</td>
+      <td><span class="badge badge-${p.status==='confirmed'?'green':'blue'}">${p.status}</span></td>
       <td style="color:var(--dim);font-size:12px">${new Date(p.createdAt).toLocaleDateString('fr-FR')}</td>
     </tr>`).join('')}
   </table></div></div>`;
@@ -399,30 +608,25 @@ async function loadTickets() {
   const tickets = await authFetch(`${API}/support/mine`);
   const el = document.getElementById('myTickets');
   if (!tickets?.length) { el.innerHTML = `<div style="color:var(--dim);font-size:13px">Aucun ticket ouvert.</div>`; return; }
-  el.innerHTML = tickets.map(t => `
+  el.innerHTML = tickets.map(t=>`
     <div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px">
       <div style="display:flex;justify-content:space-between">
         <strong style="font-size:13px">${t.subject}</strong>
         <span class="badge badge-${t.status==='open'?'red':'green'}">${t.status}</span>
       </div>
       <div style="color:var(--dim);font-size:12px;margin-top:4px">${new Date(t.createdAt).toLocaleDateString('fr-FR')}</div>
-      ${t.reply ? `<div style="margin-top:8px;padding:8px;background:rgba(0,230,118,.05);border-radius:6px;font-size:12px"><strong style="color:var(--green)">Réponse:</strong> ${t.reply}</div>` : ''}
+      ${t.reply?`<div style="margin-top:8px;padding:8px;background:rgba(0,230,118,.05);border-radius:6px;font-size:12px"><strong style="color:var(--green)">Réponse admin:</strong> ${t.reply}</div>`:''}
     </div>`).join('');
 }
 
 async function submitTicket() {
   const data = await authFetch(`${API}/support`, {
     method:'POST',
-    body: JSON.stringify({
-      subject: document.getElementById('ticketSubject').value,
-      message: document.getElementById('ticketMsg').value,
-      priority: document.getElementById('ticketPriority').value,
-    })
+    body:JSON.stringify({ subject:document.getElementById('ticketSubject').value, message:document.getElementById('ticketMsg').value, priority:document.getElementById('ticketPriority').value })
   });
   if (data?.id) {
     document.getElementById('ticketAlert').innerHTML = `<div class="alert alert-success">✅ Ticket envoyé! ID: ${data.id}</div>`;
-    document.getElementById('ticketSubject').value = '';
-    document.getElementById('ticketMsg').value = '';
+    document.getElementById('ticketSubject').value=''; document.getElementById('ticketMsg').value='';
     loadTickets();
   } else {
     document.getElementById('ticketAlert').innerHTML = `<div class="alert alert-error">${data?.error}</div>`;
@@ -432,30 +636,15 @@ async function submitTicket() {
 // ── Account ───────────────────────────────────────────────────────────────────
 function loadAccount() {
   document.getElementById('accountInfo').innerHTML = `
-    <div style="margin-bottom:12px">
-      <div class="form-label">Nom</div><div style="font-size:1.1rem;font-weight:600">${user.name}</div>
-    </div>
-    <div style="margin-bottom:12px">
-      <div class="form-label">Email</div><div>${user.email}</div>
-    </div>
-    <div style="margin-bottom:12px">
-      <div class="form-label">Plan</div>
-      <span class="badge badge-${user.plan}">${user.plan}</span>
-    </div>
-    <div style="margin-bottom:12px">
-      <div class="form-label">Bots maximum</div><div>${user.maxBots}</div>
-    </div>
-    <div>
-      <div class="form-label">Membre depuis</div>
-      <div style="color:var(--dim);font-size:13px">${new Date(user.createdAt).toLocaleDateString('fr-FR')}</div>
-    </div>`;
+    <div style="margin-bottom:12px"><div class="form-label">Nom</div><div style="font-size:1.05rem;font-weight:600">${user.name}</div></div>
+    <div style="margin-bottom:12px"><div class="form-label">Email</div><div>${user.email}</div></div>
+    <div style="margin-bottom:12px"><div class="form-label">Plan</div><span class="badge badge-${user.plan}">${user.plan}</span></div>
+    <div style="margin-bottom:12px"><div class="form-label">Bots maximum</div><div>${user.maxBots}</div></div>
+    <div><div class="form-label">Membre depuis</div><div style="color:var(--dim);font-size:13px">${new Date(user.createdAt).toLocaleDateString('fr-FR')}</div></div>`;
 }
 
 async function changePass() {
-  const data = await authFetch(`${API}/auth/change-password`, {
-    method:'POST',
-    body: JSON.stringify({ currentPassword: document.getElementById('curPass').value, newPassword: document.getElementById('newPass').value })
-  });
+  const data = await authFetch(`${API}/auth/change-password`, { method:'POST', body:JSON.stringify({ currentPassword:document.getElementById('curPass').value, newPassword:document.getElementById('newPass').value }) });
   document.getElementById('passAlert').innerHTML = `<div class="alert alert-${data.message?'success':'error'}">${data.message||data.error}</div>`;
 }
 
@@ -463,10 +652,9 @@ async function changePass() {
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 function showGlobal(msg, type) {
   document.getElementById('globalAlert').innerHTML = `<div class="alert alert-${type}" style="margin-bottom:16px">${msg}</div>`;
-  setTimeout(() => document.getElementById('globalAlert').innerHTML = '', 4000);
+  setTimeout(() => document.getElementById('globalAlert').innerHTML='', 5000);
 }
 
-// Init
 loadBots();
 </script>
 </body>
