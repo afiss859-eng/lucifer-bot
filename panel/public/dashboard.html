@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>𓅂 LUCIFERO — Mon Espace</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!-- NAVBAR -->
+<nav class="navbar">
+  <span class="navbar-brand">𓅂𝐃𝚯𝐌𝚫 𝐋𝐔𝐂𝐈𝐅𝚵𝐑𝚯𓅂</span>
+  <div class="navbar-links">
+    <span id="navUser" style="color:var(--dim);font-size:13px"></span>
+    <a href="/" class="btn btn-outline btn-sm">Accueil</a>
+    <button class="btn btn-danger btn-sm" onclick="logout()">Déconnexion</button>
+  </div>
+</nav>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-item active" onclick="show('bots',this)"><span class="icon">🤖</span> Mes Bots</div>
+    <div class="sidebar-item" onclick="show('plans',this)"><span class="icon">💎</span> Plans & Prix</div>
+    <div class="sidebar-item" onclick="show('payments',this)"><span class="icon">💳</span> Paiements</div>
+    <div class="sidebar-item" onclick="show('support',this)"><span class="icon">🎫</span> Support</div>
+    <div class="sidebar-item" onclick="show('account',this)"><span class="icon">👤</span> Mon Compte</div>
+    <div style="margin-top:auto;padding-top:20px">
+      <a href="https://whatsapp.com/channel/0029VbCK9wyCXC3JTDw6H51c" target="_blank" class="sidebar-item" style="background:rgba(255,215,0,.1);color:var(--gold)"><span class="icon">📺</span> Canal Officiel</a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-content">
+    <div id="globalAlert"></div>
+
+    <!-- ═══ BOTS ═══ -->
+    <div id="sec-bots" class="section active">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <h2 style="color:var(--gold)">🤖 Mes Bots WhatsApp</h2>
+        <button class="btn btn-primary" onclick="openAddBot()">+ Ajouter un Bot</button>
+      </div>
+      <div id="botsList"><div class="spinner"></div></div>
+    </div>
+
+    <!-- ═══ PLANS ═══ -->
+    <div id="sec-plans" class="section">
+      <h2 style="color:var(--gold);margin-bottom:20px">💎 Plans & Tarifs</h2>
+      <div class="grid-4" id="plansGrid"><div class="spinner"></div></div>
+    </div>
+
+    <!-- ═══ PAIEMENTS ═══ -->
+    <div id="sec-payments" class="section">
+      <h2 style="color:var(--gold);margin-bottom:20px">💳 Historique des Paiements</h2>
+      <div id="paymentsList"><div class="spinner"></div></div>
+    </div>
+
+    <!-- ═══ SUPPORT ═══ -->
+    <div id="sec-support" class="section">
+      <h2 style="color:var(--gold);margin-bottom:20px">🎫 Support & Bug Report</h2>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">📝 Nouveau Ticket</div>
+          <div id="ticketAlert"></div>
+          <div class="form-group">
+            <label class="form-label">Sujet</label>
+            <input type="text" class="form-input" id="ticketSubject" placeholder="Décrivez brièvement le problème">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Priorité</label>
+            <select class="form-select" id="ticketPriority">
+              <option value="low">🟢 Basse</option>
+              <option value="normal" selected>🟡 Normale</option>
+              <option value="high">🔴 Haute (urgence)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Message détaillé</label>
+            <textarea class="form-textarea" id="ticketMsg" rows="4" placeholder="Décrivez le problème en détail..."></textarea>
+          </div>
+          <button class="btn btn-primary btn-full" onclick="submitTicket()">📤 Envoyer le ticket</button>
+        </div>
+        <div class="card">
+          <div class="card-title">📋 Mes Tickets</div>
+          <div id="myTickets"><div class="spinner"></div></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div class="card-title">🆘 Contact Direct</div>
+        <p style="color:var(--dim);font-size:13px;margin-bottom:12px">Pour une assistance immédiate, contactez le propriétaire:</p>
+        <a href="https://wa.me/584265781353" target="_blank" class="btn btn-green">💬 WhatsApp Support</a>
+        <a href="https://whatsapp.com/channel/0029VbCK9wyCXC3JTDw6H51c" target="_blank" class="btn btn-gold" style="margin-left:8px">📺 Canal officiel</a>
+      </div>
+    </div>
+
+    <!-- ═══ ACCOUNT ═══ -->
+    <div id="sec-account" class="section">
+      <h2 style="color:var(--gold);margin-bottom:20px">👤 Mon Compte</h2>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">📋 Informations</div>
+          <div id="accountInfo"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">🔑 Changer le mot de passe</div>
+          <div id="passAlert"></div>
+          <div class="form-group">
+            <label class="form-label">Mot de passe actuel</label>
+            <input type="password" class="form-input" id="curPass" placeholder="••••••••">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nouveau mot de passe</label>
+            <input type="password" class="form-input" id="newPass" placeholder="Minimum 6 caractères">
+          </div>
+          <button class="btn btn-primary" onclick="changePass()">Modifier</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL: Ajouter Bot -->
+<div class="modal-overlay" id="addBotModal">
+  <div class="modal">
+    <span class="modal-close" onclick="closeModal('addBotModal')">✕</span>
+    <div class="modal-title">🤖 Ajouter un Bot WhatsApp</div>
+    <div id="addBotAlert"></div>
+    <div class="form-group">
+      <label class="form-label">Nom du bot</label>
+      <input type="text" class="form-input" id="botName" placeholder="Ex: Mon Bot Perso">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Numéro WhatsApp du bot</label>
+      <input type="tel" class="form-input" id="botPhone" placeholder="584265781353 (sans +)">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Numéro propriétaire (owner)</label>
+      <input type="tel" class="form-input" id="botOwner" placeholder="584265781353">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Préfixe des commandes</label>
+      <input type="text" class="form-input" id="botPrefix" placeholder="." value=".">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-outline btn-full" onclick="closeModal('addBotModal')">Annuler</button>
+      <button class="btn btn-primary btn-full" onclick="addBot()">Créer le Bot</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Connexion Bot -->
+<div class="modal-overlay" id="connectModal">
+  <div class="modal" style="max-width:520px">
+    <span class="modal-close" onclick="closeModal('connectModal')">✕</span>
+    <div class="modal-title">📱 Connecter le Bot WhatsApp</div>
+    <div class="alert alert-info" style="margin-bottom:16px">
+      ⚡ Le bot tourne sur votre téléphone/serveur. Suivez les étapes ci-dessous.
+    </div>
+    <div id="connectSteps"></div>
+    <div style="margin-top:20px;padding:16px;background:var(--card2);border-radius:8px">
+      <div style="font-size:13px;color:var(--dim);margin-bottom:8px">🔢 Connexion par code (recommandé)</div>
+      <input type="tel" class="form-input" id="connectPhone" placeholder="Votre numéro (584265781353)" style="margin-bottom:8px">
+      <button class="btn btn-gold btn-full" onclick="genCode()">⚡ Générer le Code de liaison</button>
+      <div id="pairCodeDisplay" style="display:none;margin-top:12px">
+        <div style="font-size:2rem;font-weight:bold;letter-spacing:8px;color:var(--gold);text-align:center;background:rgba(139,0,0,.2);border:2px dashed var(--accent);border-radius:8px;padding:16px;font-family:monospace" id="pairCodeText"></div>
+        <p style="text-align:center;color:var(--dim);font-size:12px;margin-top:8px">WhatsApp → ⚙️ → Appareils liés → Lier avec numéro</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Paiement -->
+<div class="modal-overlay" id="payModal">
+  <div class="modal">
+    <span class="modal-close" onclick="closeModal('payModal')">✕</span>
+    <div class="modal-title" id="payModalTitle">💳 Passer au plan supérieur</div>
+    <div id="payAlert"></div>
+    <div class="form-group">
+      <label class="form-label">Méthode de paiement</label>
+      <select class="form-select" id="payMethod">
+        <option value="paypal">PayPal</option>
+        <option value="mtn">MTN Mobile Money</option>
+        <option value="orange">Orange Money</option>
+        <option value="wave">Wave</option>
+        <option value="crypto">Crypto (USDT TRC20)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Référence de transaction (optionnel)</label>
+      <input type="text" class="form-input" id="payRef" placeholder="Numéro de transaction">
+    </div>
+    <input type="hidden" id="payPlan">
+    <button class="btn btn-primary btn-full" onclick="submitPayment()">Envoyer la demande</button>
+    <div id="payInstructions" style="display:none;margin-top:16px"></div>
+  </div>
+</div>
+
+<script>
+const API = '/api';
+let token = localStorage.getItem('panelToken');
+let user  = JSON.parse(localStorage.getItem('panelUser') || '{}');
+
+if (!token) window.location.href = '/login';
+
+document.getElementById('navUser').textContent = `👋 ${user.name || ''} | Plan: ${user.plan || 'free'}`;
+
+// ── Sections ──────────────────────────────────────────────────────────────────
+function show(name, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
+  document.getElementById('sec-' + name).classList.add('active');
+  if (el) el.classList.add('active');
+  const loaders = { bots: loadBots, plans: loadPlans, payments: loadPayments, support: loadTickets, account: loadAccount };
+  loaders[name]?.();
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+async function authFetch(url, opts={}) {
+  const res = await fetch(url, { ...opts, headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}`, ...opts.headers } });
+  const data = await res.json();
+  if (res.status === 401) { logout(); return null; }
+  return data;
+}
+
+function logout() { localStorage.clear(); window.location.href = '/login'; }
+
+// ── Bots ──────────────────────────────────────────────────────────────────────
+async function loadBots() {
+  const bots = await authFetch(`${API}/bots`);
+  const el = document.getElementById('botsList');
+  if (!bots?.length) {
+    el.innerHTML = `<div class="card" style="text-align:center;padding:40px">
+      <div style="font-size:3rem;margin-bottom:12px">🤖</div>
+      <div style="color:var(--dim)">Aucun bot configuré</div>
+      <button class="btn btn-primary" style="margin-top:16px" onclick="openAddBot()">+ Créer mon premier bot</button>
+    </div>`;
+    return;
+  }
+  el.innerHTML = `<div class="grid-2">${bots.map(b => botCard(b)).join('')}</div>`;
+}
+
+function botCard(b) {
+  const statusColor = b.status === 'running' ? 'var(--green)' : b.status === 'connecting' ? 'var(--gold)' : 'var(--dim)';
+  const statusLabel = b.status === 'running' ? '🟢 Connecté' : b.status === 'connecting' ? '🟡 Connexion...' : '🔴 Arrêté';
+  return `<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+      <div>
+        <div style="font-weight:700;font-size:1rem">${b.name}</div>
+        <div style="color:var(--dim);font-size:12px">📱 ${b.phone}</div>
+      </div>
+      <span style="color:${statusColor};font-size:12px;font-weight:600">${statusLabel}</span>
+    </div>
+    <div style="font-size:12px;color:var(--dim);margin-bottom:16px">
+      Préfixe: <code style="color:var(--gold)">${b.prefix}</code> | 
+      Owner: ${b.ownerNumber} | 
+      ${b.commands} commandes
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary btn-sm" onclick="openConnect('${b.id}')">📱 Connecter</button>
+      <button class="btn btn-outline btn-sm" onclick="deleteBot('${b.id}')">🗑️</button>
+    </div>
+  </div>`;
+}
+
+function openAddBot() { document.getElementById('addBotModal').classList.add('open'); }
+
+async function addBot() {
+  const bot = await authFetch(`${API}/bots`, {
+    method: 'POST',
+    body: JSON.stringify({
+      name: document.getElementById('botName').value,
+      phone: document.getElementById('botPhone').value,
+      ownerNumber: document.getElementById('botOwner').value,
+      prefix: document.getElementById('botPrefix').value || '.',
+    })
+  });
+  if (bot?.id) {
+    closeModal('addBotModal');
+    showGlobal('Bot créé! Connectez-le via le bouton "Connecter".', 'success');
+    loadBots();
+  } else {
+    document.getElementById('addBotAlert').innerHTML = `<div class="alert alert-error">${bot?.error}</div>`;
+  }
+}
+
+async function deleteBot(id) {
+  if (!confirm('Supprimer ce bot?')) return;
+  await authFetch(`${API}/bots/${id}`, { method: 'DELETE' });
+  loadBots();
+}
+
+function openConnect(botId) {
+  document.getElementById('connectSteps').innerHTML = `
+    <div style="font-size:13px">
+      <div style="margin-bottom:12px;padding:12px;background:var(--card2);border-radius:8px">
+        <strong style="color:var(--gold)">Étape 1</strong> — Ouvrez votre terminal (Termux ou VPS)
+      </div>
+      <div style="margin-bottom:12px;padding:12px;background:var(--card2);border-radius:8px">
+        <strong style="color:var(--gold)">Étape 2</strong> — Allez dans le dossier:<br>
+        <code style="color:var(--green)">cd lucifer-bot</code>
+      </div>
+      <div style="margin-bottom:12px;padding:12px;background:var(--card2);border-radius:8px">
+        <strong style="color:var(--gold)">Étape 3</strong> — Démarrez:<br>
+        <code style="color:var(--green)">npm start</code>
+      </div>
+    </div>`;
+  document.getElementById('connectModal').classList.add('open');
+}
+
+async function genCode() {
+  const phone = document.getElementById('connectPhone').value.replace(/\D/g,'');
+  if (!phone) return;
+  const display = document.getElementById('pairCodeDisplay');
+  const text = document.getElementById('pairCodeText');
+  text.textContent = 'Génération...';
+  display.style.display = 'block';
+  try {
+    const res = await fetch('/api/paircode', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'x-admin-token': token },
+      body: JSON.stringify({ phone })
+    });
+    const data = await res.json();
+    text.textContent = data.code || 'Erreur — Bot non démarré';
+  } catch {
+    text.textContent = 'Démarrez le bot d\'abord (npm start)';
+  }
+}
+
+// ── Plans ─────────────────────────────────────────────────────────────────────
+async function loadPlans() {
+  const plans = await authFetch(`${API}/payments/plans`);
+  const el = document.getElementById('plansGrid');
+  el.innerHTML = Object.entries(plans).map(([key, p]) => `
+    <div class="plan-card ${key === 'vip' ? 'featured' : ''}">
+      ${key === 'vip' ? '<div style="color:var(--gold);font-weight:700;font-size:12px;margin-bottom:8px">⭐ POPULAIRE</div>' : ''}
+      <div style="font-size:1.1rem;font-weight:700;margin-bottom:8px">${p.name}</div>
+      <div class="plan-price">${p.price === 0 ? 'GRATUIT' : '$' + p.price}</div>
+      <div class="plan-period">/mois</div>
+      <ul class="plan-features" style="margin:16px 0">
+        ${p.features.map(f => `<li>${f}</li>`).join('')}
+        <li>${p.maxBots} bot(s) maximum</li>
+      </ul>
+      ${key === 'free' 
+        ? `<div class="badge badge-free" style="display:block;text-align:center">Plan actuel</div>`
+        : `<button class="btn btn-${key==='vip'?'gold':'primary'} btn-full" onclick="openPay('${key}','${p.name}','${p.price}')">Choisir ce plan</button>`
+      }
+    </div>`).join('');
+}
+
+function openPay(plan, name, price) {
+  document.getElementById('payPlan').value = plan;
+  document.getElementById('payModalTitle').textContent = `💳 Plan ${name} — $${price}/mois`;
+  document.getElementById('payInstructions').style.display = 'none';
+  document.getElementById('payModal').classList.add('open');
+}
+
+async function submitPayment() {
+  const plan = document.getElementById('payPlan').value;
+  const method = document.getElementById('payMethod').value;
+  const reference = document.getElementById('payRef').value;
+  const data = await authFetch(`${API}/payments`, { method:'POST', body:JSON.stringify({plan,method,reference}) });
+  if (data?.payment) {
+    const inst = data.instructions;
+    document.getElementById('payInstructions').style.display = 'block';
+    document.getElementById('payInstructions').innerHTML = `
+      <div class="alert alert-info">
+        <div style="font-weight:700;margin-bottom:8px">📋 Instructions de paiement</div>
+        <div>${inst.info}</div>
+        <div style="margin-top:4px;font-family:monospace;color:var(--green)">${inst.detail}</div>
+        <div style="margin-top:4px;color:var(--dim);font-size:12px">${inst.note}</div>
+      </div>
+      <a href="${data.whatsapp}" target="_blank" class="btn btn-green btn-full" style="margin-top:8px">📱 Envoyer la preuve via WhatsApp</a>`;
+    document.getElementById('payAlert').innerHTML = `<div class="alert alert-success">Demande créée! Référence: <strong>${data.payment.id}</strong></div>`;
+  } else {
+    document.getElementById('payAlert').innerHTML = `<div class="alert alert-error">${data?.error}</div>`;
+  }
+}
+
+// ── Payments history ──────────────────────────────────────────────────────────
+async function loadPayments() {
+  const payments = await authFetch(`${API}/payments`);
+  const el = document.getElementById('paymentsList');
+  if (!payments?.length) { el.innerHTML = `<div class="card" style="text-align:center;color:var(--dim);padding:30px">Aucun paiement trouvé</div>`; return; }
+  el.innerHTML = `<div class="card"><div class="table-wrap"><table>
+    <tr><th>Plan</th><th>Montant</th><th>Méthode</th><th>Statut</th><th>Date</th></tr>
+    ${payments.map(p => `<tr>
+      <td>${p.plan}</td>
+      <td>$${p.amount}</td>
+      <td>${p.method}</td>
+      <td><span class="badge badge-${p.status==='confirmed'?'green':p.status==='pending'?'blue':'red'}">${p.status}</span></td>
+      <td style="color:var(--dim);font-size:12px">${new Date(p.createdAt).toLocaleDateString('fr-FR')}</td>
+    </tr>`).join('')}
+  </table></div></div>`;
+}
+
+// ── Support ───────────────────────────────────────────────────────────────────
+async function loadTickets() {
+  const tickets = await authFetch(`${API}/support/mine`);
+  const el = document.getElementById('myTickets');
+  if (!tickets?.length) { el.innerHTML = `<div style="color:var(--dim);font-size:13px">Aucun ticket ouvert.</div>`; return; }
+  el.innerHTML = tickets.map(t => `
+    <div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between">
+        <strong style="font-size:13px">${t.subject}</strong>
+        <span class="badge badge-${t.status==='open'?'red':'green'}">${t.status}</span>
+      </div>
+      <div style="color:var(--dim);font-size:12px;margin-top:4px">${new Date(t.createdAt).toLocaleDateString('fr-FR')}</div>
+      ${t.reply ? `<div style="margin-top:8px;padding:8px;background:rgba(0,230,118,.05);border-radius:6px;font-size:12px"><strong style="color:var(--green)">Réponse:</strong> ${t.reply}</div>` : ''}
+    </div>`).join('');
+}
+
+async function submitTicket() {
+  const data = await authFetch(`${API}/support`, {
+    method:'POST',
+    body: JSON.stringify({
+      subject: document.getElementById('ticketSubject').value,
+      message: document.getElementById('ticketMsg').value,
+      priority: document.getElementById('ticketPriority').value,
+    })
+  });
+  if (data?.id) {
+    document.getElementById('ticketAlert').innerHTML = `<div class="alert alert-success">✅ Ticket envoyé! ID: ${data.id}</div>`;
+    document.getElementById('ticketSubject').value = '';
+    document.getElementById('ticketMsg').value = '';
+    loadTickets();
+  } else {
+    document.getElementById('ticketAlert').innerHTML = `<div class="alert alert-error">${data?.error}</div>`;
+  }
+}
+
+// ── Account ───────────────────────────────────────────────────────────────────
+function loadAccount() {
+  document.getElementById('accountInfo').innerHTML = `
+    <div style="margin-bottom:12px">
+      <div class="form-label">Nom</div><div style="font-size:1.1rem;font-weight:600">${user.name}</div>
+    </div>
+    <div style="margin-bottom:12px">
+      <div class="form-label">Email</div><div>${user.email}</div>
+    </div>
+    <div style="margin-bottom:12px">
+      <div class="form-label">Plan</div>
+      <span class="badge badge-${user.plan}">${user.plan}</span>
+    </div>
+    <div style="margin-bottom:12px">
+      <div class="form-label">Bots maximum</div><div>${user.maxBots}</div>
+    </div>
+    <div>
+      <div class="form-label">Membre depuis</div>
+      <div style="color:var(--dim);font-size:13px">${new Date(user.createdAt).toLocaleDateString('fr-FR')}</div>
+    </div>`;
+}
+
+async function changePass() {
+  const data = await authFetch(`${API}/auth/change-password`, {
+    method:'POST',
+    body: JSON.stringify({ currentPassword: document.getElementById('curPass').value, newPassword: document.getElementById('newPass').value })
+  });
+  document.getElementById('passAlert').innerHTML = `<div class="alert alert-${data.message?'success':'error'}">${data.message||data.error}</div>`;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function showGlobal(msg, type) {
+  document.getElementById('globalAlert').innerHTML = `<div class="alert alert-${type}" style="margin-bottom:16px">${msg}</div>`;
+  setTimeout(() => document.getElementById('globalAlert').innerHTML = '', 4000);
+}
+
+// Init
+loadBots();
+</script>
+</body>
+</html>
