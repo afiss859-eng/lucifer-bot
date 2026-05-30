@@ -55,6 +55,9 @@ app.get('/api/status', (req, res) => {
     version:   config.VERSION,
     owner:     config.OWNER_NUMBER,
     botReady:  !!_sock,
+    phone:     _sock?.user?.id?.split(':')[0] || null,
+    groqReady:   !!process.env.GROQ_API_KEY,
+    geminiReady: !!process.env.GEMINI_API_KEY,
   });
 });
 
