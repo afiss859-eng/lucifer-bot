@@ -1,247 +1,334 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>𓅂 DOMA LUCIFERO 𓅂 — Dashboard</title>
-  <style>
-    :root {
-      --bg: #0a0a0f; --card: #12121a; --card2: #1a1a26;
-      --border: #1e1e2e; --accent: #8b0000; --gold: #ffd700;
-      --text: #e0e0e0; --dim: #888; --green: #00ff88; --red: #ff4444;
-    }
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { background:var(--bg); color:var(--text); font-family:'Segoe UI',sans-serif; min-height:100vh; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>𓅂 DOMA LUCIFERO — Dashboard</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07070d;--card:#0f0f1a;--card2:#161625;--card3:#1c1c2e;
+  --border:#1e1e35;--accent:#8b0000;--gold:#ffd700;--gold2:#ffb300;
+  --text:#e8e8ff;--dim:#8888aa;--green:#00c853;--red:#ff1744;--blue:#2979ff;
+  --cyan:#00e5ff;--purple:#aa00ff;
+  --r:10px;--r2:14px;--shadow:0 4px 24px rgba(0,0,0,.5);
+}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;overflow-x:hidden}
+input,textarea,select{background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 12px;width:100%;font-size:14px;outline:none;transition:border .2s}
+input:focus,textarea:focus,select:focus{border-color:var(--gold)}
+button{cursor:pointer;border:none;border-radius:8px;padding:10px 18px;font-weight:600;font-size:14px;transition:all .15s;outline:none}
+button:disabled{opacity:.45;cursor:not-allowed}
+.btn{background:var(--accent);color:#fff;width:100%}
+.btn:hover:not(:disabled){background:#a00000;transform:translateY(-1px)}
+.btn.gold{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#000}
+.btn.gold:hover:not(:disabled){filter:brightness(1.1)}
+.btn.blue{background:var(--blue);color:#fff}
+.btn.green{background:var(--green);color:#000}
+.btn.red{background:var(--red);color:#fff}
+.btn.sm{padding:7px 14px;font-size:12px;width:auto}
+.btn.ghost{background:transparent;border:1px solid var(--border);color:var(--dim)}
+.btn.ghost:hover{border-color:var(--gold);color:var(--gold)}
 
-    /* Header */
-    .header { background:linear-gradient(135deg,#0a0a0f 0%,#1a0000 50%,#0a0a0f 100%); border-bottom:2px solid var(--accent); padding:20px; text-align:center; }
-    .header h1 { font-size:2rem; background:linear-gradient(90deg,#ff0000,var(--gold),#ff0000); background-size:200%; -webkit-background-clip:text; -webkit-text-fill-color:transparent; animation:shimmer 3s infinite; }
-    @keyframes shimmer { 0%,100%{background-position:0%} 50%{background-position:100%} }
-    .header p { color:var(--dim); margin-top:5px; font-size:13px; }
+/* ── Login overlay ── */
+#loginOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.93);z-index:9999;justify-content:center;align-items:center;backdrop-filter:blur(4px)}
+#loginOverlay.show{display:flex}
+.login-card{background:var(--card);border:1px solid #2a0000;border-radius:20px;padding:40px 36px;width:min(360px,92vw);text-align:center;box-shadow:0 0 60px rgba(139,0,0,.3)}
+.login-logo{font-size:36px;margin-bottom:8px}
+.login-title{color:var(--gold);font-size:1.3rem;font-weight:700;margin-bottom:4px}
+.login-sub{color:var(--dim);font-size:12px;margin-bottom:24px}
+.login-card input{margin-bottom:14px;font-size:15px;text-align:center;letter-spacing:1px}
+#loginErr{min-height:36px;font-size:13px;margin-top:8px;border-radius:8px;padding:8px;display:none}
+#loginErr.show{display:block;background:rgba(255,23,68,.12);border:1px solid rgba(255,23,68,.3);color:#ff6b6b}
+#loginOk{display:none;color:var(--green);font-size:13px;margin-top:8px}
+#loginOk.show{display:block}
+.login-hint{margin-top:16px;font-size:11px;color:var(--dim)}
 
-    /* Nav */
-    .nav { display:flex; justify-content:center; gap:8px; padding:12px; flex-wrap:wrap; background:var(--card); border-bottom:1px solid var(--border); }
-    .nav button { background:transparent; border:1px solid var(--border); color:var(--dim); padding:7px 14px; border-radius:20px; cursor:pointer; transition:all .2s; font-size:13px; }
-    .nav button:hover, .nav button.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+/* ── Layout ── */
+.topbar{background:var(--card);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;height:56px;position:sticky;top:0;z-index:100;gap:14px}
+.topbar-logo{font-size:1.1rem;font-weight:700;color:var(--gold);white-space:nowrap;flex-shrink:0}
+.topbar-status{display:flex;align-items:center;gap:8px;font-size:12px;margin-left:auto;flex-shrink:0}
+.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.dot.connected{background:var(--green);box-shadow:0 0 6px var(--green)}
+.dot.waiting{background:var(--gold);box-shadow:0 0 6px var(--gold);animation:pulse 1.2s infinite}
+.dot.offline{background:var(--dim)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
-    /* Container */
-    .container { max-width:920px; margin:0 auto; padding:20px; }
+.nav{background:var(--card);border-bottom:1px solid var(--border);display:flex;gap:2px;padding:0 16px;overflow-x:auto;scrollbar-width:none}
+.nav::-webkit-scrollbar{display:none}
+.nav-btn{background:transparent;color:var(--dim);border:none;border-bottom:2px solid transparent;border-radius:0;padding:12px 14px;font-size:13px;white-space:nowrap;transition:all .2s}
+.nav-btn:hover{color:var(--text)}
+.nav-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
 
-    /* Card */
-    .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:22px; margin-bottom:18px; }
-    .card h2 { color:var(--gold); margin-bottom:14px; font-size:1.1rem; display:flex; align-items:center; gap:8px; }
+.main{padding:20px;max-width:1100px;margin:0 auto}
+.section{display:none}
+.section.active{display:block}
+.grid{display:grid;gap:16px}
+.grid-2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.grid-3{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+.grid-4{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
 
-    /* Status */
-    .status-badge { display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border-radius:20px; font-weight:bold; font-size:13px; }
-    .status-badge.connected { background:rgba(0,255,136,.15); color:var(--green); border:1px solid var(--green); }
-    .status-badge.disconnected { background:rgba(255,68,68,.15); color:var(--red); border:1px solid var(--red); }
-    .status-badge.waiting { background:rgba(255,215,0,.15); color:var(--gold); border:1px solid var(--gold); }
-    .dot { width:8px; height:8px; border-radius:50%; background:currentColor; animation:pulse 1.5s infinite; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+/* ── Cards ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:20px;box-shadow:var(--shadow)}
+.card h2{color:var(--gold);font-size:1rem;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card h2 .count{background:var(--accent);color:#fff;border-radius:20px;font-size:11px;padding:2px 8px}
 
-    /* Pair Code Display */
-    .pair-code-box { font-size:2.2rem; font-weight:bold; letter-spacing:10px; color:var(--gold); text-align:center; background:rgba(139,0,0,.2); border:2px dashed var(--accent); border-radius:12px; padding:22px; margin:14px 0; font-family:monospace; }
-    .pair-code-steps { background:var(--card2); border-radius:8px; padding:14px; margin-top:10px; }
-    .pair-code-steps li { margin:6px 0; font-size:13px; color:var(--dim); list-style:none; padding-left:20px; position:relative; }
-    .pair-code-steps li::before { content:'→'; position:absolute; left:0; color:var(--gold); }
+/* ── Stat cards ── */
+.stat-card{background:var(--card2);border:1px solid var(--border);border-radius:var(--r);padding:16px;text-align:center;position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,215,0,.04),transparent);pointer-events:none}
+.stat-val{font-size:1.8rem;font-weight:700;color:var(--gold);line-height:1}
+.stat-lbl{font-size:11px;color:var(--dim);margin-top:6px}
+.stat-icon{font-size:1.3rem;margin-bottom:6px}
 
-    /* Input / Button */
-    input, select, textarea { background:#1a1a2e; border:1px solid var(--border); color:var(--text); padding:10px 14px; border-radius:8px; width:100%; margin:5px 0; font-size:14px; }
-    input:focus, select:focus { outline:none; border-color:var(--accent); }
-    .btn { background:linear-gradient(135deg,var(--accent),#cc0000); border:none; color:#fff; padding:11px 24px; border-radius:8px; cursor:pointer; font-size:14px; font-weight:bold; transition:all .2s; width:100%; margin-top:8px; }
-    .btn:hover { opacity:.9; transform:translateY(-1px); }
-    .btn:disabled { opacity:.5; cursor:not-allowed; transform:none; }
-    .btn.gold { background:linear-gradient(135deg,#b8860b,var(--gold)); color:#000; }
-    .btn.green { background:linear-gradient(135deg,#006600,var(--green)); }
-    .btn.sm { width:auto; padding:7px 16px; font-size:13px; }
+/* ── Status box ── */
+.status-box{border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;gap:12px;font-size:14px}
+.status-box.connected{background:rgba(0,200,83,.08);border:1px solid rgba(0,200,83,.25)}
+.status-box.waiting{background:rgba(255,215,0,.08);border:1px solid rgba(255,215,0,.25)}
+.status-box.offline{background:rgba(136,136,170,.08);border:1px solid var(--border)}
+.status-box strong{font-size:15px}
 
-    /* Section */
-    .section { display:none; }
-    .section.active { display:block; }
+/* ── Pair code ── */
+.pair-code-box{background:var(--card3);border:2px solid var(--gold);border-radius:12px;padding:18px;text-align:center;font-size:2.2rem;font-weight:700;letter-spacing:10px;color:var(--gold);cursor:pointer;user-select:all;font-family:monospace;transition:all .2s}
+.pair-code-box:hover{background:rgba(255,215,0,.08);border-color:var(--gold2)}
+.step-box{background:var(--card3);border-radius:var(--r);padding:12px 14px;font-size:12px;color:var(--dim);line-height:2;margin-bottom:12px}
+.step-box b{color:var(--text)}
 
-    /* Login overlay */
-    #loginOverlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.88); z-index:999; justify-content:center; align-items:center; }
-    #loginOverlay.show { display:flex; }
-    .login-card { background:var(--card); border:2px solid var(--accent); border-radius:16px; padding:36px; width:340px; text-align:center; }
-    .login-card h2 { color:var(--gold); margin-bottom:8px; font-size:1.4rem; }
-    .login-card p { color:var(--dim); font-size:12px; margin-bottom:20px; }
+/* ── Table ── */
+.tbl-wrap{overflow-x:auto;border-radius:var(--r);border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--card3);color:var(--dim);font-weight:600;padding:10px 12px;text-align:left;position:sticky;top:0}
+td{padding:9px 12px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:600}
+.badge.vip{background:rgba(255,215,0,.15);color:var(--gold);border:1px solid rgba(255,215,0,.3)}
+.badge.banned{background:rgba(255,23,68,.12);color:var(--red);border:1px solid rgba(255,23,68,.3)}
+.badge.online{background:rgba(0,200,83,.12);color:var(--green)}
 
-    /* Grid */
-    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-    .grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
-    @media (max-width:600px) { .grid-2,.grid-3 { grid-template-columns:1fr; } }
+/* ── Alerts / Log ── */
+.alert{border-radius:8px;padding:10px 14px;font-size:13px;margin-top:8px}
+.alert.success{background:rgba(0,200,83,.1);border:1px solid rgba(0,200,83,.3);color:#69f0ae}
+.alert.error{background:rgba(255,23,68,.1);border:1px solid rgba(255,23,68,.3);color:#ff8a80}
+.alert.info{background:rgba(41,121,255,.1);border:1px solid rgba(41,121,255,.3);color:#82b1ff}
+.alert.warn{background:rgba(255,193,7,.1);border:1px solid rgba(255,193,7,.3);color:var(--gold)}
+.log-box{background:var(--card3);border-radius:var(--r);padding:12px;font-family:monospace;font-size:12px;color:#00e5ff;height:160px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;border:1px solid var(--border)}
+.log-line.err{color:#ff8a80}
+.log-line.ok{color:#69f0ae}
+.log-line.warn{color:var(--gold)}
 
-    /* Alert */
-    .alert { padding:11px; border-radius:8px; margin:10px 0; font-size:13px; }
-    .alert.success { background:rgba(0,255,136,.1); border:1px solid var(--green); color:var(--green); }
-    .alert.error   { background:rgba(255,68,68,.1); border:1px solid var(--red); color:var(--red); }
-    .alert.info    { background:rgba(255,215,0,.1); border:1px solid var(--gold); color:var(--gold); }
+/* ── Broadcast textarea ── */
+textarea{height:100px;resize:vertical}
 
-    /* Channel Banner */
-    .channel-banner { background:linear-gradient(135deg,#1a0000,#0a0020); border:2px solid var(--gold); border-radius:12px; padding:16px 20px; text-align:center; margin-bottom:18px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
-    .channel-banner span { color:var(--text); font-size:13px; }
+/* ── Info rows ── */
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px}
+.info-row:last-child{border-bottom:none}
+.info-label{color:var(--dim)}
+.info-val{color:var(--text);font-weight:500;text-align:right;max-width:60%}
+.info-val.gold{color:var(--gold)}
+.info-val.green{color:var(--green)}
+.info-val.red{color:var(--red)}
 
-    /* Stats grid */
-    .stat-item { background:var(--card2); border-radius:8px; padding:14px; text-align:center; }
-    .stat-item .stat-val { font-size:1.6rem; font-weight:bold; color:var(--gold); }
-    .stat-item .stat-lbl { font-size:11px; color:var(--dim); margin-top:4px; }
+/* ── Toast notifications ── */
+#toastArea{position:fixed;bottom:20px;right:20px;z-index:9998;display:flex;flex-direction:column;gap:8px;max-width:320px}
+.toast{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-size:13px;box-shadow:var(--shadow);animation:slideIn .25s ease;display:flex;align-items:center;gap:10px}
+.toast.success{border-color:rgba(0,200,83,.4)}
+.toast.error{border-color:rgba(255,23,68,.4)}
+.toast.info{border-color:rgba(41,121,255,.4)}
+@keyframes slideIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+@keyframes fadeOut{to{opacity:0;transform:translateX(40px)}}
 
-    /* Table */
-    .tbl-wrap { overflow-x:auto; }
-    table { width:100%; border-collapse:collapse; font-size:13px; }
-    th, td { padding:9px 12px; border-bottom:1px solid var(--border); text-align:left; }
-    th { color:var(--gold); font-size:12px; }
-    tr:hover td { background:rgba(255,255,255,.03); }
-    .badge { padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold; }
-    .badge.vip    { background:rgba(255,215,0,.2); color:var(--gold); }
-    .badge.banned { background:rgba(255,68,68,.2); color:var(--red); }
-    .badge.ok     { background:rgba(0,255,136,.2); color:var(--green); }
+/* ── Loader ── */
+.spinner{width:18px;height:18px;border:2px solid rgba(255,215,0,.2);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-    /* Log */
-    #logBox { background:#0d0d1a; border:1px solid var(--border); border-radius:8px; padding:14px; font-family:monospace; font-size:12px; height:180px; overflow-y:auto; color:#aaa; }
-  </style>
+/* ── Responsive ── */
+@media(max-width:520px){
+  .topbar-logo{font-size:.95rem}
+  .main{padding:14px}
+  .pair-code-box{font-size:1.6rem;letter-spacing:6px}
+}
+</style>
 </head>
 <body>
 
-<!-- Login Overlay -->
+<!-- ════════════════ LOGIN OVERLAY ════════════════ -->
 <div id="loginOverlay" class="show">
   <div class="login-card">
-    <h2>🔑 Admin Login</h2>
-    <p>𓅂𝐃𝚯𝐌𝚫 𝐋𝐔𝐂𝐈𝐅𝚵𝐑𝚯𓅂 Dashboard</p>
-    <input type="password" id="passwordInput" placeholder="Mot de passe admin" onkeydown="if(event.key==='Enter')login()">
-    <button class="btn" onclick="login()" id="loginBtn">Se connecter</button>
-    <div id="loginMsg"></div>
-    <p style="margin-top:14px;font-size:11px">Mot de passe par défaut: <code style="color:var(--gold)">lucifer2024</code></p>
+    <div class="login-logo">𓅂</div>
+    <div class="login-title">DOMA LUCIFERO</div>
+    <div class="login-sub">Panneau d'administration sécurisé</div>
+    <input type="password" id="pwInput" placeholder="Mot de passe admin" autocomplete="current-password" maxlength="80">
+    <button class="btn gold" id="loginBtn" onclick="doLogin()">🔐 Se connecter</button>
+    <div id="loginErr"></div>
+    <div id="loginOk"></div>
+    <div class="login-hint">Mot de passe défini dans les variables Render<br>Défaut: <code>lucifer2024</code></div>
   </div>
 </div>
 
-<!-- Header -->
-<div class="header">
-  <h1>𓅂𝐃𝚯𝐌𝚫 𝐋𝐔𝐂𝐈𝐅𝚵𝐑𝚯𓅂</h1>
-  <p>Dashboard Admin v2.1 • Bot WhatsApp 700+ Commandes</p>
+<!-- ════════════════ TOP BAR ════════════════ -->
+<div class="topbar">
+  <div class="topbar-logo">𓅂 DOMA LUCIFERO</div>
+  <div class="topbar-status">
+    <div class="dot offline" id="topDot"></div>
+    <span id="topStatus" style="color:var(--dim);font-size:12px">Chargement...</span>
+    <button class="btn ghost sm" onclick="doLogout()" style="margin-left:8px;padding:5px 10px;font-size:11px">Quitter</button>
+  </div>
 </div>
 
-<!-- Nav -->
-<div class="nav">
-  <button class="active" onclick="showSection('connexion',this)">📱 Connexion</button>
-  <button onclick="showSection('stats',this)">📊 Stats</button>
-  <button onclick="showSection('users',this)">👥 Utilisateurs</button>
-  <button onclick="showSection('vip',this)">👑 VIP</button>
-  <button onclick="showSection('bans',this)">🚫 Bans</button>
-  <button onclick="showSection('broadcast',this)">📢 Broadcast</button>
-  <button onclick="showSection('send',this)">💬 Envoyer</button>
-  <button onclick="logout()" style="color:var(--red)">⛔ Déconnecter</button>
+<!-- ════════════════ NAV TABS ════════════════ -->
+<div class="nav" id="navBar">
+  <button class="nav-btn active" onclick="showTab('connexion',this)">📱 Connexion</button>
+  <button class="nav-btn" onclick="showTab('tableau',this)">📊 Tableau de bord</button>
+  <button class="nav-btn" onclick="showTab('users',this)">👥 Utilisateurs</button>
+  <button class="nav-btn" onclick="showTab('vip',this)">👑 VIP</button>
+  <button class="nav-btn" onclick="showTab('bans',this)">🚫 Bannis</button>
+  <button class="nav-btn" onclick="showTab('broadcast',this)">📢 Broadcast</button>
+  <button class="nav-btn" onclick="showTab('send',this)">💬 Message</button>
+  <button class="nav-btn" onclick="showTab('tools',this)">🛠️ Outils</button>
 </div>
 
-<div class="container">
+<!-- ════════════════ MAIN CONTENT ════════════════ -->
+<div class="main">
 
   <!-- ═══ CONNEXION ═══ -->
   <div id="connexion" class="section active">
+    <div class="grid grid-2">
 
-    <div class="channel-banner">
-      <span>📺 Canal officiel: <strong>Doma Lucifero Tech</strong></span>
-      <a href="https://whatsapp.com/channel/0029VbCK9wyCXC3JTDw6H51c" target="_blank" class="btn gold sm">Suivre</a>
-    </div>
-
-    <!-- Statut -->
-    <div class="card">
-      <h2>📡 Statut du Bot</h2>
-      <div id="statusBadge" class="status-badge disconnected">
-        <span class="dot"></span><span id="statusText">Déconnecté</span>
-      </div>
-      <div style="margin-top:12px;color:var(--dim);font-size:13px" id="statusInfo"></div>
-    </div>
-
-    <!-- Pair Code -->
-    <div class="card" id="pairCard">
-      <h2>🔢 Connexion WhatsApp</h2>
-
-      <!-- Alerte notification -->
-      <div style="background:rgba(255,215,0,.08);border:1px solid rgba(255,215,0,.3);border-radius:8px;padding:12px 14px;margin-bottom:14px">
-        <div style="font-size:13px;font-weight:bold;color:var(--gold);margin-bottom:6px">📳 Comment ça marche :</div>
-        <div style="font-size:12px;color:var(--dim);line-height:1.7">
-          1. Entrez votre numéro → <b>Générer</b><br>
-          2. WhatsApp vous envoie une <b>notification de liaison</b> sur votre téléphone<br>
-          3. Appuyez sur la notification et <b>confirmez</b><br>
-          4. Si pas de notif → entrez le code manuellement : ⚙️ → Appareils liés → Lier avec numéro
+      <!-- Statut bot -->
+      <div class="card">
+        <h2>🤖 Statut du Bot</h2>
+        <div id="statusBox" class="status-box offline" style="margin-bottom:14px">
+          <div class="dot offline" id="statusDot"></div>
+          <div>
+            <strong id="statusTxt">Chargement...</strong>
+            <div style="font-size:12px;color:var(--dim);margin-top:3px" id="statusInfo">Connexion au serveur...</div>
+          </div>
+        </div>
+        <div class="grid grid-2" style="gap:10px;margin-bottom:12px">
+          <div class="stat-card">
+            <div class="stat-icon">📱</div>
+            <div class="stat-val" id="botNumShort" style="font-size:1.1rem">—</div>
+            <div class="stat-lbl">Numéro WhatsApp</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">⏱️</div>
+            <div class="stat-val" id="uptimeShort" style="font-size:1.1rem">—</div>
+            <div class="stat-lbl">Uptime</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn ghost sm" onclick="updateStatus()">🔄 Rafraîchir</button>
+          <button class="btn sm" onclick="doRestart()" style="background:var(--card3);color:var(--dim)">🔄 Redémarrer bot</button>
         </div>
       </div>
 
-      <div style="background:rgba(139,0,0,.12);border-left:3px solid var(--accent);padding:8px 12px;border-radius:4px;margin-bottom:14px;font-size:11px;color:var(--dim)">
-        🇫🇷 <b>33</b>XXXXXXXXX &nbsp;|&nbsp; 🇩🇿 <b>213</b>XXXXXXXXX &nbsp;|&nbsp; 🇨🇮 <b>225</b>XXXXXXXXXX &nbsp;|&nbsp; 🇨🇩 <b>243</b>XXXXXXXXX &nbsp;|&nbsp; 🇨🇲 <b>237</b>XXXXXXXXX
-      </div>
+      <!-- Pair Code -->
+      <div class="card" id="pairCard">
+        <h2>🔢 Lier WhatsApp</h2>
 
-      <div style="display:flex;gap:10px;margin-bottom:10px">
-        <input type="tel" id="pairPhone" placeholder="Indicatif + numéro (ex: 33612345678)" style="flex:1;font-size:15px">
-        <button class="btn gold" id="pairBtn" onclick="requestPairCode()" style="white-space:nowrap">⚡ Générer</button>
-      </div>
+        <!-- Instructions -->
+        <div class="step-box">
+          1. Entrez votre numéro (indicatif pays + numéro)<br>
+          2. Cliquez <b>⚡ Générer le code</b><br>
+          3. WhatsApp → ⚙️ → <b>Appareils liés</b> → <b>Lier avec numéro</b><br>
+          4. Entrez le code affiché
+        </div>
 
-      <!-- État en cours -->
-      <div id="pairWaiting" style="display:none;text-align:center;padding:16px;background:rgba(255,215,0,.06);border-radius:8px;margin-bottom:10px">
-        <div style="font-size:28px;animation:spin 1s linear infinite;display:inline-block">⏳</div>
-        <div style="color:var(--gold);font-weight:bold;margin:6px 0">Demande en cours...</div>
-        <div style="font-size:11px;color:var(--dim)">Le bot contacte les serveurs WhatsApp (jusqu'à 30s)</div>
-      </div>
+        <!-- Exemples pays -->
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px">
+          <span onclick="setCountry('33')"  class="flag-btn" title="France">🇫🇷 33</span>
+          <span onclick="setCountry('213')" class="flag-btn" title="Algérie">🇩🇿 213</span>
+          <span onclick="setCountry('212')" class="flag-btn" title="Maroc">🇲🇦 212</span>
+          <span onclick="setCountry('216')" class="flag-btn" title="Tunisie">🇹🇳 216</span>
+          <span onclick="setCountry('225')" class="flag-btn" title="Côte d'Ivoire">🇨🇮 225</span>
+          <span onclick="setCountry('243')" class="flag-btn" title="RDC">🇨🇩 243</span>
+          <span onclick="setCountry('237')" class="flag-btn" title="Cameroun">🇨🇲 237</span>
+          <span onclick="setCountry('1')"   class="flag-btn" title="USA/Canada">🇺🇸 1</span>
+          <span onclick="setCountry('58')"  class="flag-btn" title="Venezuela">🇻🇪 58</span>
+        </div>
+        <style>.flag-btn{cursor:pointer;background:var(--card3);border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:12px;user-select:none;transition:all .15s}.flag-btn:hover{border-color:var(--gold);color:var(--gold)}</style>
 
-      <!-- Code affiché -->
-      <div id="pairCodeDisplay" style="display:none;margin-top:4px">
-        <div style="font-size:11px;color:var(--dim);text-align:center;margin-bottom:6px">✅ Code généré — Vérifiez votre téléphone (notification WhatsApp)</div>
-        <div class="pair-code-box" id="pairCodeText" onclick="this.select&&this.select()" title="Cliquez pour copier"></div>
-        <div style="text-align:center;font-size:11px;color:var(--dim);margin-top:4px">⏱️ Expire dans <span id="pairSecs">60</span>s — <span id="pairCopyMsg"></span></div>
-        <div style="margin-top:10px;font-size:12px;color:var(--dim);background:var(--card2);border-radius:6px;padding:10px">
-          Si pas de notification : ⚙️ <b>Paramètres</b> → <b>Appareils liés</b> → <b>Lier un appareil</b> → <b>Lier avec un numéro</b> → entrez le code
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <input type="tel" id="pairPhone" placeholder="Ex: 33612345678" style="font-size:15px">
+          <button class="btn gold sm" id="pairBtn" onclick="requestPairCode()" style="white-space:nowrap;font-size:14px">⚡ Générer</button>
+        </div>
+
+        <!-- Spinner d'attente -->
+        <div id="pairSpinner" style="display:none;align-items:center;gap:10px;padding:10px;background:rgba(255,215,0,.06);border-radius:8px;margin-bottom:8px">
+          <div class="spinner"></div>
+          <span style="font-size:13px;color:var(--gold)">Connexion aux serveurs WhatsApp...</span>
+        </div>
+
+        <!-- Code affiché -->
+        <div id="pairResult" style="display:none">
+          <div style="text-align:center;font-size:12px;color:var(--dim);margin-bottom:8px">✅ Code généré — copiez et liez dans WhatsApp</div>
+          <div class="pair-code-box" id="pairCodeBox" onclick="copyCode()">XXXX-XXXX</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:12px">
+            <span style="color:var(--dim)">Expire dans <b id="codeTimer" style="color:var(--gold)">60</b>s</span>
+            <button class="btn ghost sm" onclick="copyCode()">📋 Copier</button>
+          </div>
+        </div>
+
+        <div id="pairMsg" style="margin-top:8px"></div>
+
+        <!-- Vider session -->
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+          <span style="font-size:11px;color:var(--dim)">Bot bloqué ou déjà lié?</span>
+          <button class="btn sm" id="clearBtn" onclick="clearSession()" style="background:rgba(139,0,0,.25);border:1px solid rgba(139,0,0,.4);color:#ff8a80;font-size:11px">🗑️ Vider la session</button>
         </div>
       </div>
 
-      <div id="pairMsg" style="margin-top:8px"></div>
-
-      <!-- Bouton vider session -->
-      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
-        <button class="btn" onclick="clearSession()" style="background:rgba(139,0,0,.3);font-size:12px;padding:6px 14px">🗑️ Vider la session (si bloqué)</button>
-        <span style="font-size:11px;color:var(--dim);margin-left:8px">Puis redémarrez sur Render</span>
-      </div>
     </div>
 
-    <!-- Log -->
-    <div class="card">
-      <h2>📋 Journal</h2>
-      <div id="logBox">En attente...</div>
+    <!-- Journal des actions -->
+    <div class="card" style="margin-top:16px">
+      <h2>📋 Journal <button class="btn ghost sm" style="margin-left:auto;font-size:11px" onclick="clearLog()">Effacer</button></h2>
+      <div class="log-box" id="logBox">Démarrage du dashboard...<br></div>
     </div>
-
   </div>
 
-  <!-- ═══ STATS ═══ -->
-  <div id="stats" class="section">
-    <div class="card">
-      <h2>📊 Statistiques</h2>
-      <div id="statsGrid" class="grid-3" style="margin-bottom:14px">
-        <div class="stat-item"><div class="stat-val" id="s-users">—</div><div class="stat-lbl">Utilisateurs</div></div>
-        <div class="stat-item"><div class="stat-val" id="s-vip">—</div><div class="stat-lbl">VIP</div></div>
-        <div class="stat-item"><div class="stat-val" id="s-banned">—</div><div class="stat-lbl">Bannis</div></div>
-        <div class="stat-item"><div class="stat-val" id="s-groups">—</div><div class="stat-lbl">Groupes</div></div>
-        <div class="stat-item"><div class="stat-val" id="s-coins">—</div><div class="stat-lbl">Total Coins</div></div>
-        <div class="stat-item"><div class="stat-val" id="s-uptime">—</div><div class="stat-lbl">Uptime</div></div>
+  <!-- ═══ TABLEAU DE BORD ═══ -->
+  <div id="tableau" class="section">
+    <div class="grid grid-4" style="margin-bottom:16px">
+      <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-val" id="s-users">—</div><div class="stat-lbl">Utilisateurs</div></div>
+      <div class="stat-card"><div class="stat-icon">👑</div><div class="stat-val" id="s-vip">—</div><div class="stat-lbl">VIP</div></div>
+      <div class="stat-card"><div class="stat-icon">🚫</div><div class="stat-val" id="s-banned">—</div><div class="stat-lbl">Bannis</div></div>
+      <div class="stat-card"><div class="stat-icon">💬</div><div class="stat-val" id="s-groups">—</div><div class="stat-lbl">Groupes</div></div>
+      <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-val" id="s-coins">—</div><div class="stat-lbl">Total Coins</div></div>
+      <div class="stat-card"><div class="stat-icon">⏱️</div><div class="stat-val" id="s-uptime">—</div><div class="stat-lbl">Uptime</div></div>
+      <div class="stat-card"><div class="stat-icon">🧠</div><div class="stat-val" id="s-memory">—</div><div class="stat-lbl">RAM (MB)</div></div>
+      <div class="stat-card"><div class="stat-icon">🤖</div><div class="stat-val" id="s-cmds" style="font-size:1.2rem">700+</div><div class="stat-lbl">Commandes</div></div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card">
+        <h2>📡 Informations Bot</h2>
+        <div class="info-row"><span class="info-label">Nom</span><span class="info-val gold" id="i-name">—</span></div>
+        <div class="info-row"><span class="info-label">Numéro</span><span class="info-val" id="i-number">—</span></div>
+        <div class="info-row"><span class="info-label">Version</span><span class="info-val" id="i-version">—</span></div>
+        <div class="info-row"><span class="info-label">Propriétaire</span><span class="info-val" id="i-owner">—</span></div>
+        <div class="info-row"><span class="info-label">Statut connexion</span><span class="info-val green" id="i-conn">—</span></div>
+        <button class="btn ghost sm" style="margin-top:12px" onclick="loadStats()">🔄 Actualiser</button>
       </div>
-      <div style="color:var(--dim);font-size:13px">
-        Bot: <span id="s-botname" style="color:var(--text)">—</span> | 
-        Numéro: <span id="s-botnumber" style="color:var(--gold)">—</span> | 
-        RAM: <span id="s-memory" style="color:var(--text)">—</span>
+      <div class="card">
+        <h2>⚡ Actions rapides</h2>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button class="btn" onclick="showTab('broadcast',document.querySelectorAll('.nav-btn')[5])">📢 Envoyer un broadcast</button>
+          <button class="btn blue" onclick="showTab('send',document.querySelectorAll('.nav-btn')[6])">💬 Envoyer un message</button>
+          <button class="btn gold" onclick="showTab('vip',document.querySelectorAll('.nav-btn')[3])">👑 Gérer les VIP</button>
+          <button class="btn" onclick="showTab('bans',document.querySelectorAll('.nav-btn')[4])" style="background:var(--red)">🚫 Gérer les bannis</button>
+          <button class="btn ghost" onclick="doRestart()">🔄 Redémarrer le bot</button>
+        </div>
       </div>
-      <button class="btn sm" style="margin-top:10px;width:auto" onclick="loadStats()">🔄 Actualiser</button>
     </div>
   </div>
 
   <!-- ═══ UTILISATEURS ═══ -->
   <div id="users" class="section">
     <div class="card">
-      <h2>👥 Utilisateurs récents</h2>
-      <div class="tbl-wrap">
-        <table id="usersTable">
-          <thead><tr><th>Numéro</th><th>Statut</th><th>Coins</th><th>Actions</th></tr></thead>
-          <tbody id="usersTbody"><tr><td colspan="4" style="color:var(--dim)">Chargement...</td></tr></tbody>
-        </table>
+      <h2>👥 Utilisateurs <span class="count" id="userCount">0</span></h2>
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+        <input type="text" id="userSearch" placeholder="Rechercher par numéro..." style="max-width:260px" oninput="filterUsers()">
+        <button class="btn ghost sm" onclick="loadUsers()">🔄 Actualiser</button>
       </div>
-      <button class="btn sm" style="margin-top:10px;width:auto" onclick="loadUsers()">🔄 Actualiser</button>
+      <div id="usersResult"><div style="color:var(--dim);font-size:13px">Chargement...</div></div>
     </div>
   </div>
 
@@ -249,33 +336,31 @@
   <div id="vip" class="section">
     <div class="card">
       <h2>👑 Gestion VIP</h2>
-      <div style="display:flex;gap:10px;margin-bottom:12px">
-        <input type="text" id="vipJid" placeholder="Numéro (ex: 584265781353)" style="flex:1">
-        <button class="btn gold sm" onclick="addVip()">➕ Ajouter</button>
-        <button class="btn sm" style="background:var(--card2)" onclick="removeVip()">➖ Retirer</button>
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+        <input type="tel" id="vipJid" placeholder="Numéro (ex: 33612345678)" style="max-width:240px">
+        <button class="btn gold sm" onclick="addVip()">➕ Ajouter VIP</button>
+        <button class="btn sm" onclick="removeVip()" style="background:var(--card3);color:var(--dim)">➖ Retirer VIP</button>
+        <button class="btn ghost sm" onclick="loadVip()">🔄 Actualiser</button>
       </div>
       <div id="vipMsg"></div>
-      <div class="tbl-wrap">
-        <table><thead><tr><th>JID</th><th>Action</th></tr></thead>
-        <tbody id="vipList"><tr><td colspan="2" style="color:var(--dim)">Chargement...</td></tr></tbody></table>
-      </div>
+      <div id="vipResult" style="margin-top:12px"></div>
     </div>
   </div>
 
-  <!-- ═══ BANS ═══ -->
+  <!-- ═══ BANNIS ═══ -->
   <div id="bans" class="section">
     <div class="card">
-      <h2>🚫 Gestion des Bans</h2>
-      <div style="display:flex;gap:10px;margin-bottom:10px">
-        <input type="text" id="banJid"    placeholder="Numéro à bannir" style="flex:1">
-        <input type="text" id="banReason" placeholder="Raison" style="flex:1">
+      <h2>🚫 Gestion Bannis</h2>
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:flex-end">
+        <div style="flex:1;min-width:200px">
+          <input type="tel" id="banJid" placeholder="Numéro à bannir" style="margin-bottom:6px">
+          <input type="text" id="banReason" placeholder="Raison (optionnel)">
+        </div>
         <button class="btn sm" onclick="addBan()" style="background:var(--red)">🚫 Bannir</button>
+        <button class="btn ghost sm" onclick="loadBans()">🔄 Actualiser</button>
       </div>
       <div id="banMsg"></div>
-      <div class="tbl-wrap">
-        <table><thead><tr><th>JID</th><th>Raison</th><th>Action</th></tr></thead>
-        <tbody id="banList"><tr><td colspan="3" style="color:var(--dim)">Chargement...</td></tr></tbody></table>
-      </div>
+      <div id="banResult" style="margin-top:12px"></div>
     </div>
   </div>
 
@@ -283,342 +368,632 @@
   <div id="broadcast" class="section">
     <div class="card">
       <h2>📢 Broadcast</h2>
-      <p style="color:var(--dim);font-size:13px;margin-bottom:12px">Envoyer un message à tous les utilisateurs du bot.</p>
-      <textarea id="broadcastMsg" rows="4" placeholder="Votre message de broadcast..."></textarea>
-      <button class="btn" onclick="doBroadcast()" id="broadcastBtn">📢 Envoyer le Broadcast</button>
-      <div id="broadcastResult"></div>
-    </div>
-  </div>
-
-  <!-- ═══ ENVOYER ═══ -->
-  <div id="send" class="section">
-    <div class="card">
-      <h2>💬 Envoyer un Message</h2>
-      <input type="text" id="sendJid" placeholder="Numéro destinataire (ex: 584265781353)">
-      <textarea id="sendMsg" rows="3" placeholder="Votre message..." style="margin-top:8px"></textarea>
-      <button class="btn" onclick="sendMessage()">💬 Envoyer</button>
-      <div id="sendResult"></div>
-    </div>
-    <div class="card">
-      <h2>💰 Gérer les Coins</h2>
-      <div style="display:flex;gap:10px">
-        <input type="text" id="coinsJid"    placeholder="Numéro" style="flex:2">
-        <input type="number" id="coinsAmt"  placeholder="Montant" style="flex:1">
-        <button class="btn gold sm" onclick="addCoins()">Ajouter</button>
+      <div class="alert warn" style="margin-bottom:14px">⚠️ Ce message sera envoyé à <strong>tous les utilisateurs enregistrés</strong>.</div>
+      <textarea id="bcText" placeholder="Votre message broadcast..."></textarea>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn" onclick="doBroadcast()" id="bcBtn" style="flex:1">📢 Envoyer à tous</button>
+        <button class="btn ghost sm" onclick="document.getElementById('bcText').value=''">✖ Effacer</button>
       </div>
-      <div id="coinsResult"></div>
+      <div id="bcMsg" style="margin-top:8px"></div>
     </div>
   </div>
 
-</div>
+  <!-- ═══ ENVOYER MESSAGE ═══ -->
+  <div id="send" class="section">
+    <div class="grid grid-2">
+      <div class="card">
+        <h2>💬 Envoyer un message</h2>
+        <div style="margin-bottom:10px">
+          <label style="font-size:12px;color:var(--dim);display:block;margin-bottom:4px">Numéro destinataire</label>
+          <input type="tel" id="sendJid" placeholder="Ex: 33612345678">
+        </div>
+        <div style="margin-bottom:10px">
+          <label style="font-size:12px;color:var(--dim);display:block;margin-bottom:4px">Message</label>
+          <textarea id="sendMsg" placeholder="Votre message..."></textarea>
+        </div>
+        <button class="btn gold" onclick="sendMessage()">💬 Envoyer</button>
+        <div id="sendResult" style="margin-top:8px"></div>
+      </div>
+      <div class="card">
+        <h2>💰 Gérer les Coins</h2>
+        <div style="margin-bottom:10px">
+          <label style="font-size:12px;color:var(--dim);display:block;margin-bottom:4px">Numéro</label>
+          <input type="tel" id="coinsJid" placeholder="Ex: 33612345678">
+        </div>
+        <div style="margin-bottom:10px">
+          <label style="font-size:12px;color:var(--dim);display:block;margin-bottom:4px">Montant (négatif pour retirer)</label>
+          <input type="number" id="coinsAmt" placeholder="Ex: 500">
+        </div>
+        <button class="btn blue" onclick="addCoins()">💰 Appliquer</button>
+        <div id="coinsResult" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
 
+  <!-- ═══ OUTILS ═══ -->
+  <div id="tools" class="section">
+    <div class="grid grid-2">
+      <div class="card">
+        <h2>🔧 Actions système</h2>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div>
+            <button class="btn gold" onclick="doRestart()" id="restartBtn">🔄 Redémarrer le processus bot</button>
+            <div style="font-size:11px;color:var(--dim);margin-top:4px">Relance le bot sans toucher à Render</div>
+          </div>
+          <div>
+            <button class="btn" onclick="clearSession()" style="background:rgba(139,0,0,.25);border:1px solid rgba(139,0,0,.4);color:#ff8a80" id="clearBtn2">🗑️ Vider la session WhatsApp</button>
+            <div style="font-size:11px;color:var(--dim);margin-top:4px">Déconnecte le bot — vous devrez relancer le pair code</div>
+          </div>
+          <div id="toolsMsg"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>📊 Infos système</h2>
+        <div class="info-row"><span class="info-label">Version bot</span><span class="info-val" id="t-version">—</span></div>
+        <div class="info-row"><span class="info-label">RAM utilisée</span><span class="info-val" id="t-ram">—</span></div>
+        <div class="info-row"><span class="info-label">Uptime</span><span class="info-val" id="t-uptime">—</span></div>
+        <div class="info-row"><span class="info-label">Commandes actives</span><span class="info-val gold">700+</span></div>
+        <div class="info-row"><span class="info-label">Statut IA Groq</span><span class="info-val" id="t-groq">—</span></div>
+        <div class="info-row"><span class="info-label">Statut IA Gemini</span><span class="info-val" id="t-gemini">—</span></div>
+        <button class="btn ghost sm" style="margin-top:12px" onclick="loadTools()">🔄 Actualiser</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- Toast notifications -->
+<div id="toastArea"></div>
+
+<!-- ════════════════ JAVASCRIPT ════════════════ -->
 <script>
-const API = '';
-let token = localStorage.getItem('adminToken');
-if (token) document.getElementById('loginOverlay').classList.remove('show');
+'use strict';
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
-async function login() {
-  const btn = document.getElementById('loginBtn');
-  btn.disabled = true; btn.textContent = 'Connexion...';
-  const pw = document.getElementById('passwordInput').value;
-  const r = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:pw}) });
-  const d = await r.json();
-  if (d.token) {
-    token = d.token;
-    localStorage.setItem('adminToken', token);
-    document.getElementById('loginOverlay').classList.remove('show');
-    initDashboard();
-  } else {
-    document.getElementById('loginMsg').innerHTML = `<div class="alert error">${d.error}</div>`;
-    btn.disabled = false; btn.textContent = 'Se connecter';
+// ── State ──────────────────────────────────────────────────────────────────────
+let token      = localStorage.getItem('adm_tok') || null;
+let allUsers   = [];
+let pairTick   = null;
+let pollInt    = null;
+let statusInt  = null;
+let _connected = false;
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const pw = document.getElementById('pwInput');
+  if (pw) pw.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  if (token) boot();
+});
+
+function boot() {
+  document.getElementById('loginOverlay').classList.remove('show');
+  updateStatus();
+  statusInt = setInterval(updateStatus, 6000);
+  log('✅ Session admin restaurée');
+}
+
+// ── LOGIN ──────────────────────────────────────────────────────────────────────
+async function doLogin() {
+  const btn    = document.getElementById('loginBtn');
+  const pw     = document.getElementById('pwInput').value.trim();
+  const errEl  = document.getElementById('loginErr');
+  const okEl   = document.getElementById('loginOk');
+
+  errEl.textContent = '';
+  errEl.classList.remove('show');
+  okEl.classList.remove('show');
+
+  if (!pw) {
+    errEl.textContent = '⚠️ Entrez le mot de passe.';
+    errEl.classList.add('show');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Connexion...';
+
+  try {
+    const r = await fetchJSON('/api/login', 'POST', { password: pw });
+    if (r.token) {
+      token = r.token;
+      localStorage.setItem('adm_tok', token);
+      okEl.textContent = '✅ Connecté! Chargement...';
+      okEl.classList.add('show');
+      setTimeout(boot, 600);
+    } else {
+      errEl.textContent = '❌ ' + (r.error || 'Mot de passe incorrect.');
+      errEl.classList.add('show');
+      btn.disabled = false;
+      btn.textContent = '🔐 Se connecter';
+      shake(document.querySelector('.login-card'));
+    }
+  } catch (e) {
+    errEl.textContent = '🌐 Serveur injoignable. Vérifiez que le bot tourne sur Render.';
+    errEl.classList.add('show');
+    btn.disabled = false;
+    btn.textContent = '🔐 Se connecter';
   }
 }
 
-function logout() {
-  fetch('/api/logout', { method:'POST', headers:{'x-admin-token':token} }).catch(()=>{});
-  localStorage.removeItem('adminToken');
+function doLogout() {
+  apiFetch('/api/logout', 'POST').catch(() => {});
   token = null;
+  localStorage.removeItem('adm_tok');
+  clearInterval(statusInt);
+  clearInterval(pollInt);
   document.getElementById('loginOverlay').classList.add('show');
+  document.getElementById('pwInput').value = '';
+  document.getElementById('loginErr').classList.remove('show');
 }
 
-// ── Navigation ────────────────────────────────────────────────────────────────
-function showSection(id, btn) {
+// ── NAVIGATION ─────────────────────────────────────────────────────────────────
+function showTab(id, btn) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  btn.classList.add('active');
-  if (id==='stats')   loadStats();
-  if (id==='vip')     loadVip();
-  if (id==='bans')    loadBans();
-  if (id==='users')   loadUsers();
+  if (btn) btn.classList.add('active');
+  if (id === 'tableau')   loadStats();
+  if (id === 'users')     loadUsers();
+  if (id === 'vip')       loadVip();
+  if (id === 'bans')      loadBans();
+  if (id === 'tools')     loadTools();
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
-function initDashboard() {
-  updateStatus();
-  setInterval(updateStatus, 5000);
-}
-if (token) initDashboard();
-
-// ── Statut ────────────────────────────────────────────────────────────────────
+// ── STATUS ─────────────────────────────────────────────────────────────────────
 async function updateStatus() {
   try {
-    const r = await fetch('/api/status');
-    const d = await r.json();
-    const badge = document.getElementById('statusBadge');
-    const txt   = document.getElementById('statusText');
+    const d = await fetchJSON('/api/status');
+    _connected = !!d.connected;
+
+    const dot   = document.getElementById('statusDot');
+    const topDot = document.getElementById('topDot');
+    const txt   = document.getElementById('statusTxt');
     const info  = document.getElementById('statusInfo');
-    const pairCard = document.getElementById('pairCard');
+    const box   = document.getElementById('statusBox');
+    const ts    = document.getElementById('topStatus');
+    const pair  = document.getElementById('pairCard');
+
+    const numEl = document.getElementById('botNumShort');
+    const upEl  = document.getElementById('uptimeShort');
 
     if (d.connected) {
-      badge.className = 'status-badge connected';
-      txt.textContent = `Connecté — ${d.botName}`;
-      info.textContent = `Bot actif et opérationnel`;
-      pairCard.style.display = 'none';
+      [dot, topDot].forEach(el => el && (el.className = 'dot connected'));
+      txt.textContent  = '✅ Bot connecté';
+      info.textContent = `Numéro: ${d.phone || '—'} | ${d.botName || ''}`;
+      box.className    = 'status-box connected';
+      ts.textContent   = 'Connecté ✓';
+      ts.style.color   = 'var(--green)';
+      if (numEl) numEl.textContent = d.phone || '—';
     } else if (d.botReady) {
-      badge.className = 'status-badge waiting';
-      txt.textContent = 'Bot démarré — En attente de connexion';
-      info.textContent = 'Entrez votre numéro ci-dessous pour générer un code de liaison.';
-      pairCard.style.display = 'block';
+      [dot, topDot].forEach(el => el && (el.className = 'dot waiting'));
+      txt.textContent  = '⏳ Prêt — en attente du pair code';
+      info.textContent = 'Entrez votre numéro ci-dessous pour lier WhatsApp';
+      box.className    = 'status-box waiting';
+      ts.textContent   = 'En attente de liaison';
+      ts.style.color   = 'var(--gold)';
     } else {
-      badge.className = 'status-badge disconnected';
-      txt.textContent = 'Déconnecté';
-      info.textContent = 'Le bot démarre... patientez 10-20 secondes.';
-      pairCard.style.display = 'block';
+      [dot, topDot].forEach(el => el && (el.className = 'dot offline'));
+      txt.textContent  = '🔄 Bot en démarrage...';
+      info.textContent = 'Patientez 15-30s puis rafraîchissez';
+      box.className    = 'status-box offline';
+      ts.textContent   = 'Démarrage...';
+      ts.style.color   = 'var(--dim)';
     }
-    addLog(d.connected ? '✅ Bot connecté' : d.botReady ? '⏳ Bot prêt, en attente de pair code' : '🔄 Bot en démarrage...');
-  } catch(e) { addLog('⚠️ Impossible de joindre le serveur'); }
-}
 
-// ── Pair Code ─────────────────────────────────────────────────────────────────
-let pairTimer = null;
-let pollTimer = null;
-
-async function requestPairCode() {
-  const phone = document.getElementById('pairPhone').value.replace(/\D/g,'');
-  if (!phone || phone.length < 7) return showMsg('pairMsg','❌ Format: indicatif+numéro sans + (ex: 33612345678)','error');
-
-  const btn = document.getElementById('pairBtn');
-  btn.disabled = true; btn.textContent = '⏳';
-  document.getElementById('pairWaiting').style.display = 'block';
-  document.getElementById('pairCodeDisplay').style.display = 'none';
-  document.getElementById('pairMsg').innerHTML = '';
-  if (pairTimer) { clearInterval(pairTimer); pairTimer = null; }
-  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
-
-  try {
-    const r = await fetch('/api/paircode', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({phone}) });
-    const d = await r.json();
-    document.getElementById('pairWaiting').style.display = 'none';
-
-    if (d.code) {
-      showPairCode(d.formatted || d.code, phone);
-    } else if (d.error && (d.error.includes('automatiquement') || d.error.includes('démarrage'))) {
-      showMsg('pairMsg','⏳ ' + d.error,'info');
-      startCodePolling(phone);
-    } else {
-      const tip = d.tip ? '<br><small style='opacity:.65'>💡 ' + d.tip + '</small>' : '';
-      showMsg('pairMsg','❌ ' + (d.error||'Erreur inconnue') + tip,'error');
-    }
-  } catch(e) {
-    document.getElementById('pairWaiting').style.display = 'none';
-    showMsg('pairMsg','❌ Erreur réseau: ' + e.message,'error');
-  } finally {
-    btn.disabled = false; btn.textContent = '⚡ Générer';
+    if (upEl && d.uptime) upEl.textContent = fmtUptime(d.uptime);
+  } catch (e) {
+    document.getElementById('topStatus').textContent = 'Hors ligne';
+    document.getElementById('topStatus').style.color = 'var(--red)';
   }
 }
 
-function showPairCode(code, phone) {
-  document.getElementById('pairCodeText').textContent = code;
-  document.getElementById('pairCodeDisplay').style.display = 'block';
-  document.getElementById('pairWaiting').style.display = 'none';
-  showMsg('pairMsg','📳 <b>Vérifiez votre téléphone!</b> WhatsApp vous a envoyé une notification de liaison.<br><small style='opacity:.7'>Pas de notif? ⚙️ Paramètres → Appareils liés → Lier avec numéro → entrez le code</small>','success');
-  addLog('📲 Code: ' + code + ' | ' + phone);
-  let sec = 60;
-  document.getElementById('pairSecs').textContent = sec;
-  pairTimer = setInterval(() => {
-    sec--; const el = document.getElementById('pairSecs'); if(el) el.textContent = sec;
-    if (sec <= 0) { clearInterval(pairTimer); pairTimer=null; document.getElementById('pairCodeDisplay').style.display='none'; showMsg('pairMsg','⏰ Expiré. Regénérez.','error'); }
-  }, 1000);
-  document.getElementById('pairCodeText').style.cursor='pointer';
-  document.getElementById('pairCodeText').onclick = () => {
-    navigator.clipboard?.writeText(code.replace(/-/g,''));
-    document.getElementById('pairCopyMsg').textContent = '✅ Copié!';
-    setTimeout(()=>{ const el=document.getElementById('pairCopyMsg'); if(el) el.textContent=''; },2000);
-  };
+// ── PAIR CODE ──────────────────────────────────────────────────────────────────
+function setCountry(code) {
+  const inp = document.getElementById('pairPhone');
+  const cur = inp.value.replace(/\D/g, '');
+  if (!cur.startsWith(code)) inp.value = code;
+  inp.focus();
 }
 
-function startCodePolling(phone) {
+async function requestPairCode() {
+  const phone = document.getElementById('pairPhone').value.replace(/\D/g, '');
+  const btn   = document.getElementById('pairBtn');
+
+  if (!phone || phone.length < 7) {
+    showPairMsg('❌ Format: indicatif pays + numéro sans espaces.<br><small>Ex: 33612345678 pour la France</small>', 'error');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;display:inline-block"></span>';
+  document.getElementById('pairSpinner').style.display = 'flex';
+  document.getElementById('pairResult').style.display  = 'none';
+  document.getElementById('pairMsg').innerHTML = '';
+  if (pairTick) { clearInterval(pairTick); pairTick = null; }
+  if (pollInt)  { clearInterval(pollInt);  pollInt  = null; }
+
+  try {
+    const r = await fetchJSON('/api/paircode', 'POST', { phone });
+    document.getElementById('pairSpinner').style.display = 'none';
+
+    if (r.code) {
+      displayCode(r.formatted || r.code, phone);
+    } else if (r.waiting) {
+      showPairMsg(`⏳ ${r.error || 'Code en génération...'}`, 'info');
+      startPolling(phone);
+    } else {
+      const tip = r.tip ? `<br><small style="opacity:.7">💡 ${r.tip}</small>` : '';
+      showPairMsg(`❌ ${r.error || 'Erreur inconnue.'}${tip}`, 'error');
+    }
+  } catch (e) {
+    document.getElementById('pairSpinner').style.display = 'none';
+    showPairMsg(`🌐 Erreur réseau: ${e.message}<br><small>Vérifiez que le bot est démarré sur Render.</small>`, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚡ Générer';
+  }
+}
+
+function displayCode(code, phone) {
+  document.getElementById('pairCodeBox').textContent = code;
+  document.getElementById('pairResult').style.display  = 'block';
+  document.getElementById('pairSpinner').style.display = 'none';
+  showPairMsg('📳 <b>Code prêt!</b> WhatsApp → ⚙️ → Appareils liés → Lier avec numéro', 'success');
+  log(`📲 Code généré pour ${phone}: ${code}`);
+
+  let sec = 60;
+  document.getElementById('codeTimer').textContent = sec;
+  if (pairTick) clearInterval(pairTick);
+  pairTick = setInterval(() => {
+    sec--;
+    const el = document.getElementById('codeTimer');
+    if (el) el.textContent = sec;
+    if (sec <= 0) {
+      clearInterval(pairTick);
+      pairTick = null;
+      document.getElementById('pairResult').style.display = 'none';
+      showPairMsg('⏰ Code expiré. Cliquez à nouveau sur ⚡ Générer.', 'warn');
+    }
+  }, 1000);
+}
+
+function copyCode() {
+  const code = document.getElementById('pairCodeBox').textContent.replace(/-/g, '');
+  if (!code || code === 'XXXX-XXXX') return;
+  navigator.clipboard?.writeText(code).then(() => {
+    toast('✅ Code copié!', 'success');
+  }).catch(() => { toast('Copiez manuellement: ' + code, 'info'); });
+}
+
+function startPolling(phone) {
   let tries = 0;
-  pollTimer = setInterval(async () => {
+  showPairMsg('⏳ Génération en cours... (auto-détection)', 'info');
+  if (pollInt) clearInterval(pollInt);
+  pollInt = setInterval(async () => {
     tries++;
     try {
-      const r = await fetch('/api/paircode/poll');
-      const d = await r.json();
-      if (d.fresh && d.code) { clearInterval(pollTimer); pollTimer=null; document.getElementById('pairWaiting').style.display='none'; showPairCode(d.formatted||d.code, phone); }
+      const r = await fetchJSON('/api/paircode/poll');
+      if (r.fresh && r.code) {
+        clearInterval(pollInt); pollInt = null;
+        document.getElementById('pairSpinner').style.display = 'none';
+        displayCode(r.formatted || r.code, phone);
+      }
     } catch {}
-    if (tries >= 20) { clearInterval(pollTimer); pollTimer=null; }
+    if (tries >= 30) { clearInterval(pollInt); pollInt = null; showPairMsg('⏰ Délai dépassé. Réessayez.', 'error'); }
   }, 2000);
 }
 
-async function clearSession() {
-  if (!confirm('Vider la session WhatsApp? Le bot sera déconnecté. Vous devrez redémarrer sur Render.')) return;
-  try {
-    const r = await fetch('/api/clearsession', { method:'POST', headers:{'x-admin-token': token||'', 'Content-Type':'application/json'} });
-    const d = await r.json();
-    alert(d.message || d.error);
-  } catch(e) { alert('Erreur: ' + e.message); }
+function showPairMsg(html, type) {
+  document.getElementById('pairMsg').innerHTML = `<div class="alert ${type}" style="margin-top:6px">${html}</div>`;
 }
 
-// ── Stats ─────────────────────────────────────────────────────────────────────
+async function clearSession() {
+  if (!confirm('Vider la session WhatsApp? Le bot sera déconnecté. Vous devrez refaire le pair code.')) return;
+  const btns = [document.getElementById('clearBtn'), document.getElementById('clearBtn2')];
+  btns.forEach(b => { if (b) { b.disabled = true; b.textContent = '⏳'; } });
+  try {
+    const r = await apiFetch('/api/clearsession', 'POST');
+    const d = await r.json();
+    toast(d.message || d.error || 'Session vidée.', d.message ? 'success' : 'error');
+    log('🗑️ Session vidée: ' + (d.message || d.error));
+    if (d.message) showTab('connexion', document.querySelector('.nav-btn'));
+  } catch (e) {
+    toast('Erreur: ' + e.message, 'error');
+  } finally {
+    btns.forEach(b => { if (b) { b.disabled = false; b.textContent = b.id === 'clearBtn' ? '🗑️ Vider la session' : '🗑️ Vider la session WhatsApp'; } });
+  }
+}
+
+// ── STATS ──────────────────────────────────────────────────────────────────────
 async function loadStats() {
   try {
-    const d = await authGet('/api/stats');
-    document.getElementById('s-users').textContent   = d.totalUsers  || 0;
-    document.getElementById('s-vip').textContent     = d.vipCount    || 0;
-    document.getElementById('s-banned').textContent  = d.bannedCount || 0;
-    document.getElementById('s-groups').textContent  = d.groups      || 0;
-    document.getElementById('s-coins').textContent   = (d.totalCoins || 0).toLocaleString();
-    document.getElementById('s-uptime').textContent  = d.uptimeHuman || '—';
-    document.getElementById('s-botname').textContent   = d.botName   || '—';
-    document.getElementById('s-botnumber').textContent = d.botNumber || '—';
-    document.getElementById('s-memory').textContent    = (d.memoryMB || '—') + ' MB';
-  } catch(e) { console.error(e); }
+    const d = await authFetch('/api/stats');
+    if (d.error) return;
+    const s = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v ?? '—'; };
+    s('s-users',   d.totalUsers  || 0);
+    s('s-vip',     d.vipCount    || 0);
+    s('s-banned',  d.bannedCount || 0);
+    s('s-groups',  d.groups      || 0);
+    s('s-coins',   (d.totalCoins || 0).toLocaleString());
+    s('s-uptime',  d.uptimeHuman || '—');
+    s('s-memory',  d.memoryMB    || '—');
+    s('i-name',    d.botName     || '—');
+    s('i-number',  d.botNumber   || '—');
+    s('i-version', d.version     || '—');
+    s('i-owner',   d.owner       || '—');
+    const connEl = document.getElementById('i-conn');
+    if (connEl) { connEl.textContent = d.connected ? '✅ Connecté' : '❌ Déconnecté'; connEl.className = `info-val ${d.connected?'green':'red'}`; }
+    if (document.getElementById('botNumShort')) document.getElementById('botNumShort').textContent = d.botNumber || '—';
+    if (document.getElementById('uptimeShort')) document.getElementById('uptimeShort').textContent = d.uptimeHuman || '—';
+  } catch {}
 }
 
-// ── Users ─────────────────────────────────────────────────────────────────────
-async function loadUsers() {
+// ── TOOLS ──────────────────────────────────────────────────────────────────────
+async function loadTools() {
   try {
-    const users = await authGet('/api/users');
-    const tbody = document.getElementById('usersTbody');
-    if (!users.length) { tbody.innerHTML = '<tr><td colspan="4" style="color:var(--dim)">Aucun utilisateur</td></tr>'; return; }
-    tbody.innerHTML = users.slice(0,50).map(u => `
-      <tr>
-        <td style="font-size:12px">${u.jid.replace('@s.whatsapp.net','')}</td>
-        <td>${u.isBanned?'<span class="badge banned">Banni</span>':u.isVip?'<span class="badge vip">VIP</span>':'<span class="badge ok">Normal</span>'}</td>
-        <td>💰 ${u.coins}</td>
-        <td><button class="btn sm" style="padding:4px 8px;font-size:11px" onclick="quickBan('${u.jid}')">🚫</button></td>
-      </tr>`).join('');
-  } catch(e) {}
+    const d = await authFetch('/api/stats');
+    const s = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v ?? '—'; };
+    s('t-version', d.version     || '—');
+    s('t-ram',     (d.memoryMB   || '—') + ' MB');
+    s('t-uptime',  d.uptimeHuman || '—');
+    s('t-groq',    d.groqReady   ? '✅ Configurée' : '⚠️ GROQ_API_KEY manquante');
+    s('t-gemini',  d.geminiReady ? '✅ Configurée' : '⚠️ GEMINI_API_KEY manquante');
+    const gEl = document.getElementById('t-groq');
+    if (gEl) gEl.style.color = d.groqReady ? 'var(--green)' : 'var(--gold)';
+    const gmEl = document.getElementById('t-gemini');
+    if (gmEl) gmEl.style.color = d.geminiReady ? 'var(--green)' : 'var(--gold)';
+  } catch {}
 }
 
-async function quickBan(jid) {
-  if (!confirm('Bannir '+jid+'?')) return;
-  await authPost('/api/banned/add', {jid, reason:'Via dashboard'});
+async function doRestart() {
+  if (!confirm('Redémarrer le processus bot? La connexion sera brièvement interrompue.')) return;
+  const btn = document.getElementById('restartBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Redémarrage...'; }
+  try {
+    await apiFetch('/api/restart', 'POST');
+    toast('🔄 Bot en cours de redémarrage...', 'info');
+    log('🔄 Redémarrage lancé');
+    setTimeout(() => { if (btn) { btn.disabled = false; btn.textContent = '🔄 Redémarrer le processus bot'; } updateStatus(); }, 5000);
+  } catch (e) {
+    toast('Erreur: ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 Redémarrer le processus bot'; }
+  }
+}
+
+// ── UTILISATEURS ───────────────────────────────────────────────────────────────
+async function loadUsers() {
+  const res = document.getElementById('usersResult');
+  res.innerHTML = '<div style="color:var(--dim);font-size:13px">Chargement...</div>';
+  try {
+    allUsers = await authFetch('/api/users');
+    if (!Array.isArray(allUsers)) { allUsers = []; }
+    document.getElementById('userCount').textContent = allUsers.length;
+    renderUsers(allUsers);
+  } catch (e) {
+    res.innerHTML = `<div class="alert error">Erreur: ${e.message}</div>`;
+  }
+}
+
+function filterUsers() {
+  const q = document.getElementById('userSearch').value.toLowerCase();
+  renderUsers(q ? allUsers.filter(u => u.jid.toLowerCase().includes(q)) : allUsers);
+}
+
+function renderUsers(list) {
+  const res = document.getElementById('usersResult');
+  if (!list.length) { res.innerHTML = '<div style="color:var(--dim);font-size:13px;padding:10px">Aucun utilisateur.</div>'; return; }
+  const rows = list.slice(0, 100).map(u => {
+    const num  = u.jid.replace('@s.whatsapp.net', '').replace('@g.us', '');
+    const seen = u.lastSeen ? new Date(u.lastSeen).toLocaleDateString('fr') : '—';
+    return `<tr>
+      <td style="font-family:monospace;font-size:12px">${num}</td>
+      <td>${u.isVip ? '<span class="badge vip">VIP</span>' : ''}${u.isBanned ? '<span class="badge banned">Banni</span>' : ''}</td>
+      <td style="color:var(--dim);font-size:12px">${seen}</td>
+      <td style="color:var(--gold);font-size:12px">${u.coins || 0} 💰</td>
+      <td>
+        <button class="btn gold sm" onclick="quickVip('${u.jid}')" title="VIP">👑</button>
+        <button class="btn sm" onclick="quickBan('${u.jid}')" title="Bannir" style="background:var(--red);margin-left:4px">🚫</button>
+      </td>
+    </tr>`;
+  }).join('');
+  res.innerHTML = `<div class="tbl-wrap"><table><thead><tr><th>Numéro</th><th>Statut</th><th>Dernière activité</th><th>Coins</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table></div>${list.length > 100 ? `<div style="font-size:11px;color:var(--dim);margin-top:6px">Affichage des 100 premiers sur ${list.length}</div>` : ''}`;
+}
+
+async function quickVip(jid) {
+  await authFetch('/api/vip/add', 'POST', { jid });
+  toast('👑 VIP ajouté', 'success');
   loadUsers();
 }
 
-// ── VIP ───────────────────────────────────────────────────────────────────────
+async function quickBan(jid) {
+  if (!confirm('Bannir ' + jid.replace('@s.whatsapp.net', '') + '?')) return;
+  await authFetch('/api/banned/add', 'POST', { jid, reason: 'Via dashboard' });
+  toast('🚫 Banni', 'success');
+  loadUsers();
+}
+
+// ── VIP ────────────────────────────────────────────────────────────────────────
 async function loadVip() {
   try {
-    const d = await authGet('/api/vip');
-    const tbody = document.getElementById('vipList');
-    const keys = Object.keys(d);
-    tbody.innerHTML = keys.length ? keys.map(jid => `
-      <tr><td style="font-size:12px">${jid}</td>
-      <td><button class="btn sm" style="background:var(--red);padding:4px 10px" onclick="removeVipJid('${jid}')">Retirer</button></td></tr>`).join('')
-      : '<tr><td colspan="2" style="color:var(--dim)">Aucun VIP</td></tr>';
+    const d = await authFetch('/api/vip');
+    const keys = Object.keys(d || {});
+    const rows = keys.map(jid => {
+      const num = jid.replace('@s.whatsapp.net', '');
+      return `<tr><td style="font-family:monospace;font-size:12px">${num}</td><td><button class="btn sm" onclick="removeVipJid('${jid}')" style="background:var(--red);padding:4px 10px">Retirer</button></td></tr>`;
+    }).join('');
+    document.getElementById('vipResult').innerHTML = keys.length
+      ? `<div class="tbl-wrap"><table><thead><tr><th>Numéro VIP</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table></div>`
+      : '<div style="color:var(--dim);font-size:13px;padding:8px">Aucun VIP.</div>';
   } catch {}
 }
 
 async function addVip() {
   const jid = document.getElementById('vipJid').value.trim();
-  if (!jid) return;
-  const d = await authPost('/api/vip/add', {jid});
-  showMsg('vipMsg', d.message || d.error, d.message ? 'success' : 'error');
-  loadVip();
-}
-async function removeVip() {
-  const jid = document.getElementById('vipJid').value.trim();
-  if (!jid) return;
-  const d = await authPost('/api/vip/remove', {jid});
-  showMsg('vipMsg', d.message || d.error, d.message ? 'success' : 'error');
-  loadVip();
-}
-async function removeVipJid(jid) {
-  await authPost('/api/vip/remove', {jid});
+  if (!jid) { setMsg('vipMsg', '❌ Entrez un numéro.', 'error'); return; }
+  const d = await authFetch('/api/vip/add', 'POST', { jid });
+  setMsg('vipMsg', d.message || d.error || '?', d.message ? 'success' : 'error');
+  document.getElementById('vipJid').value = '';
   loadVip();
 }
 
-// ── Bans ──────────────────────────────────────────────────────────────────────
+async function removeVip() {
+  const jid = document.getElementById('vipJid').value.trim();
+  if (!jid) { setMsg('vipMsg', '❌ Entrez un numéro.', 'error'); return; }
+  const d = await authFetch('/api/vip/remove', 'POST', { jid });
+  setMsg('vipMsg', d.message || d.error || '?', d.message ? 'success' : 'error');
+  document.getElementById('vipJid').value = '';
+  loadVip();
+}
+
+async function removeVipJid(jid) {
+  const d = await authFetch('/api/vip/remove', 'POST', { jid });
+  toast(d.message || d.error || '?', d.message ? 'success' : 'error');
+  loadVip();
+}
+
+// ── BANS ───────────────────────────────────────────────────────────────────────
 async function loadBans() {
   try {
-    const d = await authGet('/api/banned');
-    const tbody = document.getElementById('banList');
-    const keys = Object.keys(d);
-    tbody.innerHTML = keys.length ? keys.map(jid => `
-      <tr><td style="font-size:12px">${jid}</td>
-      <td style="color:var(--dim);font-size:12px">${d[jid].reason||'—'}</td>
-      <td><button class="btn sm" style="background:var(--green);color:#000;padding:4px 10px" onclick="unbanJid('${jid}')">Débannir</button></td></tr>`).join('')
-      : '<tr><td colspan="3" style="color:var(--dim)">Aucun banni</td></tr>';
+    const d = await authFetch('/api/banned');
+    const keys = Object.keys(d || {});
+    const rows = keys.map(jid => {
+      const num    = jid.replace('@s.whatsapp.net', '');
+      const reason = (d[jid]?.reason || '—');
+      return `<tr><td style="font-family:monospace;font-size:12px">${num}</td><td style="font-size:12px;color:var(--dim)">${reason}</td><td><button class="btn sm" onclick="unbanJid('${jid}')" style="background:var(--green);color:#000;padding:4px 10px">Débannir</button></td></tr>`;
+    }).join('');
+    document.getElementById('banResult').innerHTML = keys.length
+      ? `<div class="tbl-wrap"><table><thead><tr><th>Numéro banni</th><th>Raison</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table></div>`
+      : '<div style="color:var(--dim);font-size:13px;padding:8px">Aucun utilisateur banni.</div>';
   } catch {}
 }
 
 async function addBan() {
-  const jid = document.getElementById('banJid').value.trim();
+  const jid    = document.getElementById('banJid').value.trim();
   const reason = document.getElementById('banReason').value.trim() || 'Via dashboard';
-  if (!jid) return;
-  const d = await authPost('/api/banned/add', {jid, reason});
-  showMsg('banMsg', d.message || d.error, d.message ? 'success' : 'error');
+  if (!jid) { setMsg('banMsg', '❌ Entrez un numéro.', 'error'); return; }
+  const d = await authFetch('/api/banned/add', 'POST', { jid, reason });
+  setMsg('banMsg', d.message || d.error || '?', d.message ? 'success' : 'error');
+  document.getElementById('banJid').value = '';
+  document.getElementById('banReason').value = '';
   loadBans();
 }
+
 async function unbanJid(jid) {
-  await authPost('/api/banned/remove', {jid});
+  const d = await authFetch('/api/banned/remove', 'POST', { jid });
+  toast(d.message || d.error || '?', d.message ? 'success' : 'error');
   loadBans();
 }
 
-// ── Broadcast ─────────────────────────────────────────────────────────────────
+// ── BROADCAST ──────────────────────────────────────────────────────────────────
 async function doBroadcast() {
-  const message = document.getElementById('broadcastMsg').value.trim();
-  if (!message) return;
-  if (!confirm('Envoyer ce message à TOUS les utilisateurs?')) return;
-  const btn = document.getElementById('broadcastBtn');
-  btn.disabled = true; btn.textContent = '📢 Envoi en cours...';
-  const d = await authPost('/api/broadcast', {message});
-  document.getElementById('broadcastResult').innerHTML = `<div class="alert ${d.message?'success':'error'}">${d.message||d.error}</div>`;
-  btn.disabled = false; btn.textContent = '📢 Envoyer le Broadcast';
+  const msg = document.getElementById('bcText').value.trim();
+  if (!msg) { setMsg('bcMsg', '❌ Écrivez un message.', 'error'); return; }
+  const btn = document.getElementById('bcBtn');
+  btn.disabled = true; btn.textContent = '⏳ Envoi en cours...';
+  try {
+    const d = await authFetch('/api/broadcast', 'POST', { message: msg });
+    setMsg('bcMsg', d.message || d.error || '?', d.message ? 'success' : 'error');
+    log('📢 Broadcast: ' + (d.message || d.error));
+  } catch (e) {
+    setMsg('bcMsg', '❌ ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '📢 Envoyer à tous';
+  }
 }
 
-// ── Send ──────────────────────────────────────────────────────────────────────
+// ── SEND MESSAGE ───────────────────────────────────────────────────────────────
 async function sendMessage() {
   const jid = document.getElementById('sendJid').value.trim();
-  const message = document.getElementById('sendMsg').value.trim();
-  if (!jid || !message) return;
-  const d = await authPost('/api/send', {jid, message});
-  document.getElementById('sendResult').innerHTML = `<div class="alert ${d.message?'success':'error'}">${d.message||d.error}</div>`;
+  const msg = document.getElementById('sendMsg').value.trim();
+  if (!jid || !msg) { setMsg('sendResult', '❌ Numéro et message requis.', 'error'); return; }
+  const d = await authFetch('/api/send', 'POST', { jid, message: msg });
+  setMsg('sendResult', d.message || d.error || '?', d.message ? 'success' : 'error');
+  if (d.message) { document.getElementById('sendMsg').value = ''; log('💬 Envoyé à ' + jid); }
 }
 
+// ── COINS ──────────────────────────────────────────────────────────────────────
 async function addCoins() {
   const jid = document.getElementById('coinsJid').value.trim();
-  const amount = document.getElementById('coinsAmt').value;
-  if (!jid || !amount) return;
-  const d = await authPost('/api/coins', {jid, amount});
-  document.getElementById('coinsResult').innerHTML = `<div class="alert ${d.message?'success':'error'}">${d.message||d.error}</div>`;
+  const amt = document.getElementById('coinsAmt').value;
+  if (!jid || !amt) { setMsg('coinsResult', '❌ Numéro et montant requis.', 'error'); return; }
+  const d = await authFetch('/api/coins', 'POST', { jid, amount: parseInt(amt) });
+  setMsg('coinsResult', d.message || d.error || '?', d.message ? 'success' : 'error');
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-async function authGet(url) {
-  const r = await fetch(url, { headers:{'x-admin-token':token} });
-  return r.json();
+// ── HTTP Helpers ───────────────────────────────────────────────────────────────
+async function fetchJSON(url, method = 'GET', body = null) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(url, opts);
+  const ct = r.headers.get('content-type') || '';
+  if (ct.includes('application/json')) return r.json();
+  const txt = await r.text();
+  throw new Error(txt || r.statusText || 'Erreur serveur');
 }
-async function authPost(url, body) {
-  const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json','x-admin-token':token}, body:JSON.stringify(body) });
-  return r.json();
+
+async function apiFetch(url, method = 'GET', body = null) {
+  const headers = { 'Content-Type': 'application/json', 'x-admin-token': token || '' };
+  const opts = { method, headers };
+  if (body) opts.body = JSON.stringify(body);
+  return fetch(url, opts);
 }
-function showMsg(id, msg, type) {
+
+async function authFetch(url, method = 'GET', body = null) {
+  const r = await apiFetch(url, method, body);
+  const ct = r.headers.get('content-type') || '';
+  if (r.status === 401) { toast('Session expirée. Reconnectez-vous.', 'error'); doLogout(); throw new Error('401'); }
+  if (ct.includes('application/json')) return r.json();
+  const txt = await r.text();
+  throw new Error(txt || r.statusText || 'Erreur serveur');
+}
+
+// ── UI Helpers ─────────────────────────────────────────────────────────────────
+function setMsg(id, msg, type) {
   const el = document.getElementById(id);
   if (el) el.innerHTML = `<div class="alert ${type}">${msg}</div>`;
 }
 
 let logLines = [];
-function addLog(msg) {
-  const now = new Date().toLocaleTimeString();
+function log(msg, type = '') {
+  const now = new Date().toLocaleTimeString('fr', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   logLines.push(`[${now}] ${msg}`);
-  if (logLines.length > 30) logLines.shift();
+  if (logLines.length > 50) logLines.shift();
   const box = document.getElementById('logBox');
   if (box) { box.textContent = logLines.join('\n'); box.scrollTop = box.scrollHeight; }
 }
+
+function clearLog() {
+  logLines = [];
+  const box = document.getElementById('logBox');
+  if (box) box.textContent = 'Journal effacé.\n';
+}
+
+function toast(msg, type = 'info') {
+  const area = document.getElementById('toastArea');
+  if (!area) return;
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  const icons = { success: '✅', error: '❌', info: 'ℹ️', warn: '⚠️' };
+  el.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span>${msg}</span>`;
+  area.appendChild(el);
+  setTimeout(() => { el.style.animation = 'fadeOut .3s ease forwards'; setTimeout(() => el.remove(), 300); }, 3500);
+}
+
+function shake(el) {
+  if (!el) return;
+  el.style.animation = 'shake .4s ease';
+  setTimeout(() => el.style.animation = '', 400);
+}
+
+function fmtUptime(s) {
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+  if (h > 0) return `${h}h${m}m`;
+  return `${m}m${Math.floor(s % 60)}s`;
+}
+
+// ── Shake animation ────────────────────────────────────────────────────────────
+const st = document.createElement('style');
+st.textContent = '@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}';
+document.head.appendChild(st);
 </script>
 </body>
 </html>
