@@ -396,7 +396,7 @@ let pairTimer = null;
 let pollTimer = null;
 
 async function requestPairCode() {
-  const phone = document.getElementById('pairPhone').value.replace(/D/g,'');
+  const phone = document.getElementById('pairPhone').value.replace(/\D/g,'');
   if (!phone || phone.length < 7) return showMsg('pairMsg','❌ Format: indicatif+numéro sans + (ex: 33612345678)','error');
 
   const btn = document.getElementById('pairBtn');
@@ -463,8 +463,7 @@ function startCodePolling(phone) {
 }
 
 async function clearSession() {
-  if (!confirm('Vider la session WhatsApp?
-Le bot sera déconnecté. Vous devrez redémarrer sur Render.')) return;
+  if (!confirm('Vider la session WhatsApp? Le bot sera déconnecté. Vous devrez redémarrer sur Render.')) return;
   try {
     const r = await fetch('/api/clearsession', { method:'POST', headers:{'x-admin-token': token||'', 'Content-Type':'application/json'} });
     const d = await r.json();
