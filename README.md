@@ -75,7 +75,7 @@
 
   ```env
   BOT_NAME=𓅂𝐃𝚯𝐌𝚫 𝐋𝐔𝐂𝐈𝐅𝚵𝐑𝚯𓅂
-  OWNER_NUMBER=584265781353
+  OWNER_NUMBER=22656060976
   PREFIX=.
   SESSION_NAME=lucifer-session
   ```
