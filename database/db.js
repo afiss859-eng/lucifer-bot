@@ -6,7 +6,12 @@ const DB_DIR = path.join(__dirname);
 function loadDB(name) {
   const file = path.join(DB_DIR, `${name}.json`);
   if (!fs.existsSync(file)) fs.writeJsonSync(file, {});
-  return fs.readJsonSync(file);
+  try {
+    return fs.readJsonSync(file);
+  } catch {
+    fs.writeJsonSync(file, {});
+    return {};
+  }
 }
 
 function saveDB(name, data) {
@@ -14,10 +19,30 @@ function saveDB(name, data) {
   fs.writeJsonSync(file, data, { spaces: 2 });
 }
 
+// ─── USERS ─────────────────────────────────────────────
+function touchUser(jid) {
+  if (!jid) return;
+  const db = loadDB('users');
+  if (!db[jid]) db[jid] = { firstSeen: Date.now() };
+  db[jid].lastSeen = Date.now();
+  saveDB('users', db);
+}
+
+// Retourne une vue compatible avec le dashboard.
+function getData() {
+  return {
+    users: loadDB('users'),
+    vip: loadDB('vip'),
+    banned: loadDB('banned'),
+    warn: loadDB('warn'),
+    economy: loadDB('economy'),
+    notes: loadDB('notes'),
+  };
+}
+
 // ─── VIP ───────────────────────────────────────────────
 function isVip(jid) {
-  const db = loadDB('vip');
-  return !!db[jid];
+  return !!loadDB('vip')[jid];
 }
 function addVip(jid) {
   const db = loadDB('vip');
@@ -35,8 +60,7 @@ function listVip() {
 
 // ─── BANNED ────────────────────────────────────────────
 function isBanned(jid) {
-  const db = loadDB('banned');
-  return !!db[jid];
+  return !!loadDB('banned')[jid];
 }
 function banUser(jid, reason = 'Aucune raison') {
   const db = loadDB('banned');
@@ -51,8 +75,7 @@ function unbanUser(jid) {
 
 // ─── WARN ──────────────────────────────────────────────
 function getWarns(jid) {
-  const db = loadDB('warn');
-  return db[jid] || 0;
+  return loadDB('warn')[jid] || 0;
 }
 function addWarn(jid) {
   const db = loadDB('warn');
@@ -68,26 +91,24 @@ function resetWarn(jid) {
 
 // ─── ÉCONOMIE ──────────────────────────────────────────
 function getCoins(jid) {
-  const db = loadDB('economy');
-  return db[jid]?.coins || 0;
+  return loadDB('economy')[jid]?.coins || 0;
 }
 function addCoins(jid, amount) {
   const db = loadDB('economy');
   if (!db[jid]) db[jid] = { coins: 0, lastDaily: 0, lastWork: 0 };
-  db[jid].coins += amount;
+  db[jid].coins += Number(amount) || 0;
   saveDB('economy', db);
   return db[jid].coins;
 }
 function removeCoins(jid, amount) {
   const db = loadDB('economy');
   if (!db[jid]) db[jid] = { coins: 0, lastDaily: 0, lastWork: 0 };
-  db[jid].coins = Math.max(0, db[jid].coins - amount);
+  db[jid].coins = Math.max(0, db[jid].coins - (Number(amount) || 0));
   saveDB('economy', db);
   return db[jid].coins;
 }
 function getLastDaily(jid) {
-  const db = loadDB('economy');
-  return db[jid]?.lastDaily || 0;
+  return loadDB('economy')[jid]?.lastDaily || 0;
 }
 function setLastDaily(jid) {
   const db = loadDB('economy');
@@ -96,8 +117,7 @@ function setLastDaily(jid) {
   saveDB('economy', db);
 }
 function getLastWork(jid) {
-  const db = loadDB('economy');
-  return db[jid]?.lastWork || 0;
+  return loadDB('economy')[jid]?.lastWork || 0;
 }
 function setLastWork(jid) {
   const db = loadDB('economy');
@@ -106,8 +126,7 @@ function setLastWork(jid) {
   saveDB('economy', db);
 }
 function getRichList() {
-  const db = loadDB('economy');
-  return Object.entries(db)
+  return Object.entries(loadDB('economy'))
     .map(([jid, d]) => ({ jid, coins: d.coins || 0 }))
     .sort((a, b) => b.coins - a.coins)
     .slice(0, 10);
@@ -121,8 +140,7 @@ function saveNote(chat, name, content) {
   saveDB('notes', db);
 }
 function getNote(chat, name) {
-  const db = loadDB('notes');
-  return db[chat]?.[name] || null;
+  return loadDB('notes')[chat]?.[name] || null;
 }
 function deleteNote(chat, name) {
   const db = loadDB('notes');
@@ -130,11 +148,11 @@ function deleteNote(chat, name) {
   saveDB('notes', db);
 }
 function listNotes(chat) {
-  const db = loadDB('notes');
-  return Object.keys(db[chat] || {});
+  return Object.keys(loadDB('notes')[chat] || {});
 }
 
 module.exports = {
+  touchUser, getData,
   isVip, addVip, removeVip, listVip,
   isBanned, banUser, unbanUser,
   getWarns, addWarn, resetWarn,
