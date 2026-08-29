@@ -36,3 +36,25 @@ jobs:
 
       - name: Load all plugins
         run: node -e "require('./src/plugins').loadPlugins().then(m=>{console.log('Loaded commands:',m.size); if(!m.size) process.exit(1)}).catch(e=>{console.error(e);process.exit(1)})"
+
+      - name: Validate plugin contracts
+        run: |
+          node <<'NODE'
+          const { loadPlugins } = require('./src/plugins');
+          (async () => {
+            const plugins = await loadPlugins();
+            let failed = false;
+            for (const [name, plugin] of plugins) {
+              if (!plugin || typeof plugin.execute !== 'function') {
+                console.error(`Invalid plugin: ${name}`);
+                failed = true;
+              }
+              if (!Array.isArray(plugin.commands) || !plugin.commands.length) {
+                console.error(`Missing commands: ${name}`);
+                failed = true;
+              }
+            }
+            if (failed) process.exit(1);
+            console.log(`Validated ${plugins.size} plugins`);
+          })().catch(err => { console.error(err); process.exit(1); });
+          NODE
