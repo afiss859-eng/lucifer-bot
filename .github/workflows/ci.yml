@@ -9,7 +9,7 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -58,3 +58,6 @@ jobs:
             console.log(`Validated ${plugins.size} plugins`);
           })().catch(err => { console.error(err); process.exit(1); });
           NODE
+
+      - name: Verify production entrypoint imports
+        run: node --check src/index.js
