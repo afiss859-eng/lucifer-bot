@@ -1,162 +1,78 @@
 const fs = require('fs-extra');
 const path = require('path');
 
-const DB_DIR = path.join(__dirname);
+const DB_DIR = __dirname;
+const cache = new Map();
 
 function loadDB(name) {
+  if (cache.has(name)) return cache.get(name);
   const file = path.join(DB_DIR, `${name}.json`);
   if (!fs.existsSync(file)) fs.writeJsonSync(file, {});
-  try {
-    return fs.readJsonSync(file);
-  } catch {
-    fs.writeJsonSync(file, {});
-    return {};
-  }
+  let data;
+  try { data = fs.readJsonSync(file); } catch { data = {}; fs.writeJsonSync(file, {}); }
+  cache.set(name, data && typeof data === 'object' ? data : {});
+  return cache.get(name);
 }
 
 function saveDB(name, data) {
+  const normalized = data && typeof data === 'object' ? data : {};
+  cache.set(name, normalized);
   const file = path.join(DB_DIR, `${name}.json`);
-  fs.writeJsonSync(file, data, { spaces: 2 });
+  const tmp = `${file}.tmp`;
+  fs.writeJsonSync(tmp, normalized, { spaces: 2 });
+  fs.moveSync(tmp, file, { overwrite: true });
 }
 
-// ─── USERS ─────────────────────────────────────────────
 function touchUser(jid) {
   if (!jid) return;
-  const db = loadDB('users');
-  if (!db[jid]) db[jid] = { firstSeen: Date.now() };
-  db[jid].lastSeen = Date.now();
-  saveDB('users', db);
+  const data = loadDB('users');
+  if (!data[jid]) data[jid] = { firstSeen: Date.now() };
+  data[jid].lastSeen = Date.now();
+  // Do not rewrite users.json on every message; flush periodically.
+  scheduleUsersFlush();
 }
 
-// Retourne une vue compatible avec le dashboard.
+let usersFlushTimer = null;
+function scheduleUsersFlush() {
+  if (usersFlushTimer) return;
+  usersFlushTimer = setTimeout(() => {
+    usersFlushTimer = null;
+    const data = cache.get('users');
+    if (!data) return;
+    try { saveDB('users', data); } catch (_) {}
+  }, 1000);
+  usersFlushTimer.unref?.();
+}
+
 function getData() {
-  return {
-    users: loadDB('users'),
-    vip: loadDB('vip'),
-    banned: loadDB('banned'),
-    warn: loadDB('warn'),
-    economy: loadDB('economy'),
-    notes: loadDB('notes'),
-  };
+  return { users: loadDB('users'), vip: loadDB('vip'), banned: loadDB('banned'), warn: loadDB('warn'), economy: loadDB('economy'), notes: loadDB('notes') };
 }
 
-// ─── VIP ───────────────────────────────────────────────
-function isVip(jid) {
-  return !!loadDB('vip')[jid];
-}
-function addVip(jid) {
-  const db = loadDB('vip');
-  db[jid] = { addedAt: Date.now() };
-  saveDB('vip', db);
-}
-function removeVip(jid) {
-  const db = loadDB('vip');
-  delete db[jid];
-  saveDB('vip', db);
-}
-function listVip() {
-  return Object.keys(loadDB('vip'));
-}
+function isVip(jid) { return !!loadDB('vip')[jid]; }
+function addVip(jid) { const d = loadDB('vip'); d[jid] = { addedAt: Date.now() }; saveDB('vip', d); }
+function removeVip(jid) { const d = loadDB('vip'); delete d[jid]; saveDB('vip', d); }
+function listVip() { return Object.keys(loadDB('vip')); }
 
-// ─── BANNED ────────────────────────────────────────────
-function isBanned(jid) {
-  return !!loadDB('banned')[jid];
-}
-function banUser(jid, reason = 'Aucune raison') {
-  const db = loadDB('banned');
-  db[jid] = { reason, bannedAt: Date.now() };
-  saveDB('banned', db);
-}
-function unbanUser(jid) {
-  const db = loadDB('banned');
-  delete db[jid];
-  saveDB('banned', db);
-}
+function isBanned(jid) { return !!loadDB('banned')[jid]; }
+function banUser(jid, reason = 'Aucune raison') { const d = loadDB('banned'); d[jid] = { reason, bannedAt: Date.now() }; saveDB('banned', d); }
+function unbanUser(jid) { const d = loadDB('banned'); delete d[jid]; saveDB('banned', d); }
 
-// ─── WARN ──────────────────────────────────────────────
-function getWarns(jid) {
-  return loadDB('warn')[jid] || 0;
-}
-function addWarn(jid) {
-  const db = loadDB('warn');
-  db[jid] = (db[jid] || 0) + 1;
-  saveDB('warn', db);
-  return db[jid];
-}
-function resetWarn(jid) {
-  const db = loadDB('warn');
-  db[jid] = 0;
-  saveDB('warn', db);
-}
+function getWarns(jid) { return loadDB('warn')[jid] || 0; }
+function addWarn(jid) { const d = loadDB('warn'); d[jid] = (d[jid] || 0) + 1; saveDB('warn', d); return d[jid]; }
+function resetWarn(jid) { const d = loadDB('warn'); d[jid] = 0; saveDB('warn', d); }
 
-// ─── ÉCONOMIE ──────────────────────────────────────────
-function getCoins(jid) {
-  return loadDB('economy')[jid]?.coins || 0;
-}
-function addCoins(jid, amount) {
-  const db = loadDB('economy');
-  if (!db[jid]) db[jid] = { coins: 0, lastDaily: 0, lastWork: 0 };
-  db[jid].coins += Number(amount) || 0;
-  saveDB('economy', db);
-  return db[jid].coins;
-}
-function removeCoins(jid, amount) {
-  const db = loadDB('economy');
-  if (!db[jid]) db[jid] = { coins: 0, lastDaily: 0, lastWork: 0 };
-  db[jid].coins = Math.max(0, db[jid].coins - (Number(amount) || 0));
-  saveDB('economy', db);
-  return db[jid].coins;
-}
-function getLastDaily(jid) {
-  return loadDB('economy')[jid]?.lastDaily || 0;
-}
-function setLastDaily(jid) {
-  const db = loadDB('economy');
-  if (!db[jid]) db[jid] = { coins: 0, lastDaily: 0, lastWork: 0 };
-  db[jid].lastDaily = Date.now();
-  saveDB('economy', db);
-}
-function getLastWork(jid) {
-  return loadDB('economy')[jid]?.lastWork || 0;
-}
-function setLastWork(jid) {
-  const db = loadDB('economy');
-  if (!db[jid]) db[jid] = { coins: 0, lastDaily: 0, lastWork: 0 };
-  db[jid].lastWork = Date.now();
-  saveDB('economy', db);
-}
-function getRichList() {
-  return Object.entries(loadDB('economy'))
-    .map(([jid, d]) => ({ jid, coins: d.coins || 0 }))
-    .sort((a, b) => b.coins - a.coins)
-    .slice(0, 10);
-}
+function getCoins(jid) { return loadDB('economy')[jid]?.coins || 0; }
+function addCoins(jid, amount) { const d = loadDB('economy'); if (!d[jid]) d[jid] = { coins: 0, lastDaily: 0, lastWork: 0 }; d[jid].coins += Number(amount) || 0; saveDB('economy', d); return d[jid].coins; }
+function removeCoins(jid, amount) { const d = loadDB('economy'); if (!d[jid]) d[jid] = { coins: 0, lastDaily: 0, lastWork: 0 }; d[jid].coins = Math.max(0, d[jid].coins - (Number(amount) || 0)); saveDB('economy', d); return d[jid].coins; }
+function getLastDaily(jid) { return loadDB('economy')[jid]?.lastDaily || 0; }
+function setLastDaily(jid) { const d = loadDB('economy'); if (!d[jid]) d[jid] = { coins: 0, lastDaily: 0, lastWork: 0 }; d[jid].lastDaily = Date.now(); saveDB('economy', d); }
+function getLastWork(jid) { return loadDB('economy')[jid]?.lastWork || 0; }
+function setLastWork(jid) { const d = loadDB('economy'); if (!d[jid]) d[jid] = { coins: 0, lastDaily: 0, lastWork: 0 }; d[jid].lastWork = Date.now(); saveDB('economy', d); }
+function getRichList() { return Object.entries(loadDB('economy')).map(([jid, d]) => ({ jid, coins: d.coins || 0 })).sort((a, b) => b.coins - a.coins).slice(0, 10); }
 
-// ─── NOTES ─────────────────────────────────────────────
-function saveNote(chat, name, content) {
-  const db = loadDB('notes');
-  if (!db[chat]) db[chat] = {};
-  db[chat][name] = content;
-  saveDB('notes', db);
-}
-function getNote(chat, name) {
-  return loadDB('notes')[chat]?.[name] || null;
-}
-function deleteNote(chat, name) {
-  const db = loadDB('notes');
-  if (db[chat]) delete db[chat][name];
-  saveDB('notes', db);
-}
-function listNotes(chat) {
-  return Object.keys(loadDB('notes')[chat] || {});
-}
+function saveNote(chat, name, content) { const d = loadDB('notes'); if (!d[chat]) d[chat] = {}; d[chat][name] = content; saveDB('notes', d); }
+function getNote(chat, name) { return loadDB('notes')[chat]?.[name] || null; }
+function deleteNote(chat, name) { const d = loadDB('notes'); if (d[chat]) delete d[chat][name]; saveDB('notes', d); }
+function listNotes(chat) { return Object.keys(loadDB('notes')[chat] || {}); }
 
-module.exports = {
-  touchUser, getData,
-  isVip, addVip, removeVip, listVip,
-  isBanned, banUser, unbanUser,
-  getWarns, addWarn, resetWarn,
-  getCoins, addCoins, removeCoins,
-  getLastDaily, setLastDaily, getLastWork, setLastWork, getRichList,
-  saveNote, getNote, deleteNote, listNotes,
-};
+module.exports = { touchUser, getData, isVip, addVip, removeVip, listVip, isBanned, banUser, unbanUser, getWarns, addWarn, resetWarn, getCoins, addCoins, removeCoins, getLastDaily, setLastDaily, getLastWork, setLastWork, getRichList, saveNote, getNote, deleteNote, listNotes };
