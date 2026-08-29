@@ -1,11 +1,14 @@
 {
   "name": "lucifer-bot",
   "version": "2.1.0",
-  "description": "𓅂𝐃𝚯𝐌𝚫 𝐋𝐔𝐂𝐈𝐅𝚵𝐑𝚯𓅂 — Bot WhatsApp 684+ commandes",
+  "description": "𓅂𝐃𝚯𝐌𝚫 𝐋𝐔𝐂𝐈𝐅𝚵𝐑𝚯𓅂 — Bot WhatsApp",
   "main": "src/index.js",
   "scripts": {
     "start": "node -r dotenv/config src/index.js",
     "dev": "nodemon src/index.js"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.22",
@@ -36,16 +39,7 @@
   "devDependencies": {
     "nodemon": "^3.0.1"
   },
-  "keywords": [
-    "whatsapp",
-    "bot",
-    "lucifer",
-    "xmd",
-    "684-commands",
-    "vip",
-    "ai",
-    "dashboard"
-  ],
+  "keywords": ["whatsapp", "bot", "lucifer", "xmd", "vip", "ai", "dashboard"],
   "author": "afiss859-eng",
   "license": "MIT"
 }
