@@ -1,0 +1,38 @@
+name: Lucifer Bot CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Check JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do
+            node --check "$file"
+          done < <(find . -type f -name '*.js' -not -path './node_modules/*' -print0)
+
+      - name: Load configuration and database
+        run: node -e "require('./config/config'); const db=require('./database/db'); db.getData(); console.log('Core modules OK')"
+
+      - name: Load all plugins
+        run: node -e "require('./src/plugins').loadPlugins().then(m=>{console.log('Loaded commands:',m.size); if(!m.size) process.exit(1)}).catch(e=>{console.error(e);process.exit(1)})"
