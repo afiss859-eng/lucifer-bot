@@ -46,7 +46,9 @@ app.post('/api/login', (req, res) => {
   const pass = String(req.body.password || '').trim();
   const expect = process.env.ADMIN_PASSWORD || config.ADMIN_PASSWORD;
   if (!expect) return res.status(503).json({ error: 'ADMIN_PASSWORD non configuré côté serveur.' });
-  if (!pass || !crypto.timingSafeEqual(Buffer.from(pass), Buffer.from(String(expect))))
+  const a = Buffer.from(pass);
+  const b = Buffer.from(String(expect));
+  if (!pass || a.length !== b.length || !crypto.timingSafeEqual(a, b))
     return res.status(403).json({ error: 'Mot de passe incorrect.' });
   const token = crypto.randomBytes(32).toString('hex');
   sessions.add(token);
@@ -89,23 +91,17 @@ app.post('/api/paircode', async (req, res) => {
     const formatted = code.match(/.{1,4}/g)?.join('-') || code;
     _pendingCode = { code, formatted, phone, time: Date.now() };
     res.json({ code, formatted });
-  } catch (e) {
-    res.status(500).json({ error: e.message || 'Erreur inconnue' });
-  }
+  } catch (e) { res.status(500).json({ error: e.message || 'Erreur inconnue' }); }
 });
 
 app.post('/api/clearsession', authMW, async (req, res) => {
   const dir = path.join(__dirname, '..', config.SESSION_NAME || 'lucifer-session');
-  try {
-    await fs.emptyDir(dir);
-    _pendingCode = null;
-    res.json({ message: 'Session vidée. Redémarrez le bot pour générer un nouveau code.' });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  try { await fs.emptyDir(dir); _pendingCode = null; res.json({ message: 'Session vidée. Redémarrez le bot pour générer un nouveau code.' }); }
+  catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/stats', authMW, (req, res) => {
-  let db;
-  try { db = require('../database/db'); } catch {}
+  let db; try { db = require('../database/db'); } catch {}
   const d = db?.getData?.() || {};
   res.json({
     totalUsers: Object.keys(d.users || {}).length,
@@ -113,8 +109,7 @@ app.get('/api/stats', authMW, (req, res) => {
     bannedCount: Object.keys(d.banned || {}).length,
     groups: Object.keys(d.notes || {}).length,
     totalCoins: Object.values(d.economy || {}).reduce((a, u) => a + (Number(u?.coins) || 0), 0),
-    uptime: Math.floor(process.uptime()),
-    uptimeHuman: fmtUptime(process.uptime()),
+    uptime: Math.floor(process.uptime()), uptimeHuman: fmtUptime(process.uptime()),
     version: config.VERSION || '2.0', connected: _connected,
     botName: _sock?.user?.name || config.BOT_NAME || 'LUCIFERO',
     botNumber: _sock?.user?.id?.split(':')[0] || '—', owner: config.OWNER_NUMBER || '—',
@@ -128,8 +123,7 @@ app.get('/api/users', authMW, (req, res) => {
   const d = db?.getData?.() || {};
   res.json(Object.entries(d.users || {}).slice(0, 300).map(([jid, info]) => ({
     jid, lastSeen: info?.lastSeen || null,
-    isVip: !!(d.vip || {})[jid], isBanned: !!(d.banned || {})[jid],
-    coins: (d.economy || {})[jid]?.coins || 0,
+    isVip: !!(d.vip || {})[jid], isBanned: !!(d.banned || {})[jid], coins: (d.economy || {})[jid]?.coins || 0,
   })));
 });
 
@@ -156,11 +150,11 @@ app.post('/api/broadcast', authMW, async (req, res) => {
 });
 
 app.post('/api/send', authMW, async (req, res) => {
-  const { jid: j, message } = req.body;
-  const target = toJid(j);
-  if (!target || !String(message || '').trim()) return res.status(400).json({ error: 'JID et message requis.' });
+  const target = toJid(req.body.jid || req.body.phone || '');
+  const message = String(req.body.message || '').trim();
+  if (!target || !message) return res.status(400).json({ error: 'JID et message requis.' });
   if (!_sock || !_connected) return res.status(503).json({ error: 'Bot non connecté.' });
-  try { await _sock.sendMessage(target, { text: String(message) }); res.json({ message: 'Message envoyé.' }); }
+  try { await _sock.sendMessage(target, { text: message }); res.json({ message: 'Message envoyé.' }); }
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -181,7 +175,7 @@ function jid(req) { return toJid(req.body.jid || req.body.phone || ''); }
 function toJid(v) {
   if (!v) return null;
   const s = String(v).trim();
-  if (/@s\.whatsapp\.net$/.test(s)) return /^\d+@s\.whatsapp\.net$/.test(s) ? s : null;
+  if (/^\d+@s\.whatsapp\.net$/.test(s)) return s;
   const clean = s.replace(/\D/g, '');
   return clean ? `${clean}@s.whatsapp.net` : null;
 }
@@ -189,13 +183,10 @@ function fmtUptime(s) { const h = Math.floor(s / 3600), m = Math.floor((s % 3600
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 function dbAction(res, fn, okMsg) {
   let db; try { db = require('../database/db'); } catch { return res.status(500).json({ error: 'DB non disponible.' }); }
-  try { const result = fn(db); if (!result && result !== undefined) return res.status(400).json({ error: 'Opération impossible.' }); res.json({ message: okMsg }); }
-  catch (e) { res.status(500).json({ error: e.message }); }
+  try { fn(db); res.json({ message: okMsg }); } catch (e) { res.status(500).json({ error: e.message }); }
 }
 
-function startWebServer(port = Number(process.env.PORT) || 3000) {
-  app.listen(port, '0.0.0.0', () => console.log(`🌐 Dashboard: http://localhost:${port}`));
-}
+function startWebServer(port = Number(process.env.PORT) || 3000) { app.listen(port, '0.0.0.0', () => console.log(`🌐 Dashboard: http://localhost:${port}`)); }
 function setSocket(s) { _sock = s; }
 function setConnected(v) { _connected = !!v; }
 function setPairCodeFn(fn) { _pairFn = fn; }
