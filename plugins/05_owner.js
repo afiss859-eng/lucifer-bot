@@ -65,7 +65,7 @@ module.exports = {
       }
       case 'setprefix': {
         const nextPrefix = String(args[0] || '');
-        if (!/^[^\\sA-Za-z0-9]$/u.test(nextPrefix)) {
+        if (!/^[^\sA-Za-z0-9]$/u.test(nextPrefix)) {
           return await m.reply(`Usage: ${cfg.PREFIX}setprefix [un seul caractère spécial]`);
         }
         cfg.PREFIX = nextPrefix;
