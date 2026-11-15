@@ -141,7 +141,7 @@ ${isVip ? '\n👑 *Membre VIP — Accès complet*' : '\n💡 Devenez VIP pour ac
         if (eco.inventory?.crown) reward = Math.floor(reward * 1.5);
 
         db.addCoins(jid, reward);
-        db.setEco(jid, { ...eco, lastVipDaily: now, xp: (eco.xp || 0) + 50 });
+        db.setEco(jid, { lastVipDaily: now, xp: (eco.xp || 0) + 50 });
 
         await m.reply(`💰 *Daily VIP — ${tier.label}*\n\n✅ Vous avez récupéré: *+${reward.toLocaleString()} coins*\n${hasPotion ? '🧪 Potion x2 appliquée!\n' : ''}${eco.inventory?.crown ? '👑 Bonus Couronne +50%!\n' : ''}\n💳 Solde: *${(coins + reward).toLocaleString()} coins*\n\nRevenez dans 20 heures!`);
         break;
@@ -222,7 +222,7 @@ ${isVip ? '\n👑 *Membre VIP — Accès complet*' : '\n💡 Devenez VIP pour ac
         db.addCoins(jid, -item.price);
         const inv = eco.inventory || {};
         inv[itemKey] = { bought: Date.now() };
-        db.setEco(jid, { ...eco, inventory: inv });
+        db.setEco(jid, { inventory: inv });
 
         await m.reply(`✅ *Achat réussi!*\n\n${item.name} acheté pour *${item.price.toLocaleString()} coins*\n\n${item.desc}\n\n💰 Solde restant: ${(coins - item.price).toLocaleString()} coins`);
         break;
@@ -242,7 +242,7 @@ ${isVip ? '\n👑 *Membre VIP — Accès complet*' : '\n💡 Devenez VIP pour ac
         if (!itemKey || !inv[itemKey]) return await m.reply(`❌ Item non possédé. Voir: ${cfg.PREFIX}vinv`);
         const item = SHOP_ITEMS[itemKey];
         delete inv[itemKey];
-        db.setEco(jid, { ...eco, inventory: inv });
+        db.setEco(jid, { inventory: inv });
         await m.reply(`✅ *${item?.name}* utilisé!\n\n${item?.desc}`);
         break;
       }
@@ -282,7 +282,7 @@ ${isVip ? '\n👑 *Membre VIP — Accès complet*' : '\n💡 Devenez VIP pour ac
         if (remaining <= 0) {
           db.saveNote('__shared__', '__boss__', null);
           db.addCoins(jid, boss.reward);
-          db.setEco(jid, { ...eco, xp: (eco.xp || 0) + boss.xp });
+          db.setEco(jid, { xp: (eco.xp || 0) + boss.xp });
           await m.reply(`🏆 *Boss Vaincu!*\n\n${boss.name} a été éliminé!\n\n⚔️ Dégâts infligés: *${dmg}*\n💰 Récompense: *+${boss.reward.toLocaleString()} coins*\n⭐ XP: *+${boss.xp}*`);
         } else {
           boss.hp = remaining;
@@ -400,7 +400,7 @@ ${isVip ? '\n👑 *Membre VIP — Accès complet*' : '\n💡 Devenez VIP pour ac
         const base = randomInt(200, 600);
         const earned = hasSword ? Math.floor(base * 1.2) : base;
         db.addCoins(jid, earned);
-        db.setEco(jid, { ...eco, lastVipWork: now, xp: (eco.xp || 0) + 20 });
+        db.setEco(jid, { lastVipWork: now, xp: (eco.xp || 0) + 20 });
         const jobs = ['🔧 Technicien', '💻 Développeur', '🎤 Artiste', '📦 Livreur', '🔮 Mage noir', '⚔️ Mercenaire'];
         await m.reply(`💼 *VIP Work*\n\n${jobs[randomInt(0, jobs.length-1)]} — Travail accompli!\n\n💰 Gain: *+${earned} coins*${hasSword ? ' (⚔️ +20%)' : ''}\n⭐ XP: +20\n\nSolde: ${(coins + earned).toLocaleString()} coins`);
         break;
