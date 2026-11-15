@@ -78,7 +78,7 @@ const Users = {
         id:    'superadmin-root',
         name:  '👑 Super Admin',
         email: process.env.ADMIN_EMAIL || 'admin@lucifero.bot',
-        pass:  process.env.ADMIN_PASSWORD || 'LuciferAdmin@2024',
+        pass:  process.env.ADMIN_PASSWORD || '',
         plan:  'owner', maxBots: 9999,
         isAdmin: true, role: 'superadmin',
       },
@@ -86,7 +86,7 @@ const Users = {
         id:    'admin-mod-01',
         name:  '🛡️ Modérateur',
         email: 'mod@lucifero.bot',
-        pass:  process.env.MOD_PASSWORD || 'LuciferMod@2024',
+        pass:  process.env.MOD_PASSWORD || '',
         plan:  'premium', maxBots: 50,
         isAdmin: true, role: 'admin',
       },
@@ -94,7 +94,7 @@ const Users = {
         id:    'admin-support-01',
         name:  '🎫 Support',
         email: 'support@lucifero.bot',
-        pass:  process.env.SUPPORT_PASSWORD || 'LuciferSupport@2024',
+        pass:  process.env.SUPPORT_PASSWORD || '',
         plan:  'vip', maxBots: 10,
         isAdmin: true, role: 'mod',
       },
@@ -102,6 +102,10 @@ const Users = {
 
     let seeded = 0;
     for (const a of ADMINS) {
+      if (!a.pass) {
+        console.warn(`⚠️ Compte ${a.role} non créé : définissez le mot de passe dédié dans .env.`);
+        continue;
+      }
       if (!existing.includes(a.email)) {
         all[a.id] = {
           id: a.id, name: a.name, email: a.email,
@@ -111,27 +115,10 @@ const Users = {
           isActive: true, createdAt: now(), lastLogin: null, botIds: [],
         };
         seeded++;
-        console.log(`✅ Compte ${a.role} créé: ${a.email} | Mot de passe: ${a.pass}`);
+        console.log(`✅ Compte ${a.role} créé: ${a.email} (mot de passe défini dans .env).`);
       }
     }
-    if (seeded > 0) {
-      write('users', all);
-      console.log(`\n╔══════════════════════════════════════════════════════╗`);
-      console.log(`║  𓅂 COMPTES ADMINISTRATEURS CRÉÉS                     ║`);
-      console.log(`╠══════════════════════════════════════════════════════╣`);
-      console.log(`║  👑 SUPER ADMIN                                       ║`);
-      console.log(`║     Email: admin@lucifero.bot                         ║`);
-      console.log(`║     Pass:  LuciferAdmin@2024                          ║`);
-      console.log(`╠══════════════════════════════════════════════════════╣`);
-      console.log(`║  🛡️  MODÉRATEUR                                        ║`);
-      console.log(`║     Email: mod@lucifero.bot                           ║`);
-      console.log(`║     Pass:  LuciferMod@2024                            ║`);
-      console.log(`╠══════════════════════════════════════════════════════╣`);
-      console.log(`║  🎫 SUPPORT                                           ║`);
-      console.log(`║     Email: support@lucifero.bot                       ║`);
-      console.log(`║     Pass:  LuciferSupport@2024                        ║`);
-      console.log(`╚══════════════════════════════════════════════════════╝\n`);
-    }
+    if (seeded > 0) console.log(`✅ ${seeded} compte(s) administrateur(s) initialisé(s).`);
   },
 };
 
