@@ -8,18 +8,20 @@ module.exports = {
 
     switch (cmd) {
       case 'ban': {
-        const target = m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0]
-          || (args[0]?.replace(/[^0-9]/g,'')+'@s.whatsapp.net');
+        const mentioned = m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+        const number = String(args[0] || '').replace(/\D/g, '');
+        const target = mentioned || (number ? `${number}@s.whatsapp.net` : null);
         const reason = args.slice(1).join(' ') || 'Aucune raison';
-        if (!target || target === '@s.whatsapp.net') return await m.reply(`Usage: ${cfg.PREFIX}ban @user [raison]`);
+        if (!target) return await m.reply(`Usage: ${cfg.PREFIX}ban @user [raison]`);
         db.banUser(target, reason);
         await m.reply(`🚫 *@${target.split('@')[0]}* a été banni!\nRaison: ${reason}`);
         break;
       }
       case 'unban': {
-        const target = m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0]
-          || (args[0]?.replace(/[^0-9]/g,'')+'@s.whatsapp.net');
-        if (!target || target === '@s.whatsapp.net') return await m.reply(`Usage: ${cfg.PREFIX}unban @user`);
+        const mentioned = m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+        const number = String(args[0] || '').replace(/\D/g, '');
+        const target = mentioned || (number ? `${number}@s.whatsapp.net` : null);
+        if (!target) return await m.reply(`Usage: ${cfg.PREFIX}unban @user`);
         db.unbanUser(target);
         await m.reply(`✅ *@${target.split('@')[0]}* a été débanni!`);
         break;
@@ -36,16 +38,16 @@ module.exports = {
       }
       case 'addcoins': {
         const target = m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
-        const amount = parseInt(args[1]) || parseInt(args[0]);
-        if (!target || !amount) return await m.reply(`Usage: ${cfg.PREFIX}addcoins @user [montant]`);
+        const amount = Number.parseInt(args[1] || args[0], 10);
+        if (!target || !Number.isSafeInteger(amount) || amount <= 0) return await m.reply(`Usage: ${cfg.PREFIX}addcoins @user [montant positif]`);
         db.addCoins(target, amount);
         await m.reply(`✅ +${amount} coins ajoutés à *@${target.split('@')[0]}*\nNouveau solde: ${db.getCoins(target)}`);
         break;
       }
       case 'rmcoins': {
         const target = m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
-        const amount = parseInt(args[1]) || parseInt(args[0]);
-        if (!target || !amount) return await m.reply(`Usage: ${cfg.PREFIX}rmcoins @user [montant]`);
+        const amount = Number.parseInt(args[1] || args[0], 10);
+        if (!target || !Number.isSafeInteger(amount) || amount <= 0) return await m.reply(`Usage: ${cfg.PREFIX}rmcoins @user [montant positif]`);
         db.removeCoins(target, amount);
         await m.reply(`✅ -${amount} coins retirés de *@${target.split('@')[0]}*\nNouveau solde: ${db.getCoins(target)}`);
         break;
@@ -62,9 +64,13 @@ module.exports = {
         break;
       }
       case 'setprefix': {
-        if (!args[0]) return await m.reply(`Usage: ${cfg.PREFIX}setprefix [caractère]`);
-        cfg.PREFIX = args[0];
-        await m.reply(`✅ Préfixe changé en: *${args[0]}*`);
+        const nextPrefix = String(args[0] || '');
+        if (!/^[^\\sA-Za-z0-9]$/u.test(nextPrefix)) {
+          return await m.reply(`Usage: ${cfg.PREFIX}setprefix [un seul caractère spécial]`);
+        }
+        cfg.PREFIX = nextPrefix;
+        db.saveNote('__bot__', 'prefix', nextPrefix);
+        await m.reply(`✅ Préfixe changé et sauvegardé : *${nextPrefix}*`);
         break;
       }
     }
