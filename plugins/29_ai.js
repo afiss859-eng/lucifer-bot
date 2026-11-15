@@ -38,7 +38,7 @@ async function callGroq(jid, userMsg) {
   ];
 
   const res = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-    model: 'llama3-8b-8192',
+    model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
     messages,
     max_tokens: 1024,
     temperature: 0.7,
@@ -68,7 +68,7 @@ async function callGemini(jid, userMsg) {
   contents.push({ role: 'user', parts: [{ text: userMsg }] });
 
   const res = await axios.post(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${process.env.GEMINI_MODEL || 'gemini-2.5-flash'}:generateContent?key=${apiKey}`,
     {
       system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
       contents,
@@ -84,21 +84,8 @@ async function callGemini(jid, userMsg) {
 }
 
 // ─── Appel API gratuit (fallback sans clé) ────────────────────────────────────
-async function callFreeAI(userMsg) {
-  // API publique sans clé (peut être instable)
-  try {
-    const res = await axios.post('https://api.openai.com/v1/chat/completions',
-      { model: 'gpt-3.5-turbo', messages: [{ role: 'user', content: userMsg }], max_tokens: 512 },
-      { headers: { Authorization: 'Bearer free' }, timeout: 10000 }
-    );
-    return res.data.choices[0].message.content;
-  } catch {
-    // Vraiment gratuit et public:
-    const res = await axios.get(`https://api.duckduckgo.com/?q=${encodeURIComponent(userMsg)}&format=json&no_html=1`, { timeout: 10000 });
-    const abstract = res.data?.AbstractText;
-    if (abstract) return `📖 ${abstract}`;
-    throw new Error('Aucune API disponible');
-  }
+async function callFreeAI() {
+  throw new Error('Aucun fournisseur IA configuré. Ajoutez GROQ_API_KEY ou GEMINI_API_KEY dans .env.');
 }
 
 // ─── Fonction principale de sélection d'IA ────────────────────────────────────
@@ -113,8 +100,8 @@ async function callAI(jid, userMsg, preferGemini = false) {
 // ─── Plugin ──────────────────────────────────────────────────────────────────
 module.exports = {
   commands: [
-    'ai', 'chat', 'gpt', 'gemini2', 'ia',
-    'aicode', 'aitranslate', 'aipoem', 'aisummary', 'aicorrect',
+    'chat', 'gpt', 'gemini2', 'ia',
+    'aitranslate', 'aipoem', 'aisummary', 'aicorrect',
     'aihelp', 'aistory', 'aireset', 'aistats2',
   ],
   description: 'Intelligence Artificielle (IA)',
