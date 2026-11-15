@@ -171,7 +171,6 @@ textarea{height:100px;resize:vertical}
   <button class="nav-btn" onclick="tab('users',this)">👥 Utilisateurs</button>
   <button class="nav-btn" onclick="tab('vip',this)">👑 VIP</button>
   <button class="nav-btn" onclick="tab('bans',this)">🚫 Bannis</button>
-  <button class="nav-btn" onclick="tab('bc',this)">📢 Broadcast</button>
   <button class="nav-btn" onclick="tab('msg',this)">💬 Message</button>
   <button class="nav-btn" onclick="tab('tools',this)">🛠️ Outils</button>
 </div>
@@ -362,19 +361,7 @@ textarea{height:100px;resize:vertical}
     </div>
   </div>
 
-  <!-- ── BROADCAST ── -->
-  <div id="bc" class="section">
-    <div class="card">
-      <h2>📢 Broadcast</h2>
-      <div class="alert warn" style="margin-bottom:12px">⚠️ Envoyé à <b>tous les utilisateurs enregistrés</b>.</div>
-      <textarea id="bcTxt" placeholder="Votre message broadcast..."></textarea>
-      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-        <button class="btn" id="bcBtn" onclick="doBc()" style="flex:1">📢 Envoyer à tous</button>
-        <button class="btn ghost sm" onclick="document.getElementById('bcTxt').value=''">✖</button>
-      </div>
-      <div id="bcMsg" style="margin-top:8px"></div>
-    </div>
-  </div>
+  <!-- Les envois groupés sont désactivés pour protéger les comptes WhatsApp. -->
 
   <!-- ── MESSAGE ── -->
   <div id="msg" class="section">
