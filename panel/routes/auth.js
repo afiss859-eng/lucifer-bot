@@ -5,6 +5,19 @@ const { Users } = require('../db/database');
 const { signToken } = require('../middleware/auth');
 const { Settings } = require('../db/database');
 
+const loginAttempts = new Map();
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_ATTEMPTS = 10;
+
+function getLoginAttempt(ip) {
+  const now = Date.now();
+  const previous = loginAttempts.get(ip);
+  if (!previous || now - previous.startedAt >= LOGIN_WINDOW_MS) {
+    return { count: 0, startedAt: now };
+  }
+  return previous;
+}
+
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
@@ -28,13 +41,30 @@ router.post('/register', async (req, res) => {
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
   try {
+    const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+    const attempts = getLoginAttempt(ip);
+    if (attempts.count >= LOGIN_MAX_ATTEMPTS) {
+      const retrySeconds = Math.max(1, Math.ceil((LOGIN_WINDOW_MS - (Date.now() - attempts.startedAt)) / 1000));
+      res.set('Retry-After', String(retrySeconds));
+      return res.status(429).json({ error: 'Trop de tentatives. Réessayez dans 15 minutes.' });
+    }
+
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email et mot de passe requis.' });
     const user = Users.getByEmail(email);
-    if (!user) return res.status(401).json({ error: 'Email ou mot de passe incorrect.' });
+    if (!user) {
+      attempts.count += 1;
+      loginAttempts.set(ip, attempts);
+      return res.status(401).json({ error: 'Email ou mot de passe incorrect.' });
+    }
     if (!user.isActive) return res.status(403).json({ error: 'Compte désactivé. Contactez le support.' });
     const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) return res.status(401).json({ error: 'Email ou mot de passe incorrect.' });
+    if (!valid) {
+      attempts.count += 1;
+      loginAttempts.set(ip, attempts);
+      return res.status(401).json({ error: 'Email ou mot de passe incorrect.' });
+    }
+    loginAttempts.delete(ip);
     Users.update(user.id, { lastLogin: new Date().toISOString() });
     const token = signToken(user.id);
     res.json({ token, user: safeUser(user), message: 'Connexion réussie!' });

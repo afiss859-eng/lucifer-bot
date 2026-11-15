@@ -16,7 +16,7 @@
   | 🤗 RP/Anime | 20 | `.hug`, `.kiss`, `.slap`, `.marry`, `.dance` |
   | 🔬 Recherche | 20 | `.wiki`, `.crypto`, `.country`, `.ip2`, `.trivia2` |
   | 🎉 Bienvenue/Au revoir | 10 | `.setwelcome`, `.setbye`, `.testwelcome`, `.welcomestyle` |
-  | 🛡️ Anti (protection) | 50 | `.antilink`, `.antispam`, `.antibadword`, `.antiscam` |
+  | 🛡️ Protection active | 19 | `.antilink`, `.antiinvite`, `.antispam`, `.antiflood`, `.antibadword`, `.antiforward`… |
   | 📥 Téléchargements | 14 | `.ytmp3`, `.ytmp4`, `.tiktokdl`, `.igdl`, `.lyrics` |
   | ☪️ Islam | 14 | `.quran`, `.hadith`, `.dhikr`, `.dua`, `.salat` |
   | 🏋️ Santé & Sport | 23 | `.workout`, `.cardio`, `.imc`, `.calories`, `.sleep` |
@@ -31,7 +31,9 @@
   | 📱 Conseils Android | 35 | `.battery`, `.wifi`, `.developer`, `.settings` |
   | 📸 Stickers | 5 | `.sticker`, `.s`, `.toimg` |
 
-  **🏆 TOTAL: 684+ commandes — 28 plugins — 37 fichiers**
+  **🏆 TOTAL ANNONCÉ PAR LA VERSION D'ORIGINE : 684+ commandes — 28 plugins — 37 fichiers**
+
+  > Les 19 règles de protection réellement appliquées sont : `antilink`, `antiinvite`, `antispam`, `antiflood`, `antibadword`, `antivulgaire`, `antiinsult`, `antithreat`, `antiscam`, `antiads`, `antiforward`, `antisticker`, `antiaudio`, `antivideo`, `antiimage`, `antidoc`, `antigif`, `antiviewonce` et `antitag`. Les autres alias `anti...` ne sont pas encore implémentés et ne sauvegardent aucun faux réglage. Le bot doit être administrateur du groupe pour supprimer les messages.
 
   ---
 
@@ -106,7 +108,7 @@
   | `.delvip @u` | Retirer VIP |
   | `.ban @u` | Bannir du bot |
   | `.unban @u` | Débannir |
-  | `.broadcast [msg]` | Message à tous |
+  | `.broadcast [msg]` | Désactivé pour limiter les risques de bannissement |
   | `.addcoins @u [n]` | Donner coins |
   | `.rmcoins @u [n]` | Retirer coins |
   | `.restart` | Redémarrer |

@@ -18,6 +18,11 @@ const fs = require('fs-extra');
 const config = require('../config/config');
 const web = require('../web/server');
 const db = require('../database/db');
+const { enforceGroupGuard } = require('./group-guard');
+const welcomePlugin = require('../plugins/21_welcome_bye');
+
+const persistedPrefix = db.getNote('__bot__', 'prefix');
+if (persistedPrefix) config.PREFIX = persistedPrefix;
 
 const logger = pino({
   transport: { target: 'pino-pretty', options: { colorize: true, translateTime: 'SYS:HH:MM:ss', ignore: 'pid,hostname' } },
@@ -59,69 +64,104 @@ async function loadPluginsAndHandlers(sock) {
   const plugins = await loadPlugins();
   logger.info(`📦 ${plugins.size} commandes chargées`);
   const cooldowns = new Map();
-  const PREFIX = config.PREFIX || '.';
 
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
-    try {
-      if (type !== 'notify') return;
-      const mek = messages?.[0];
-      if (!mek?.message || mek.key?.fromMe) return;
+    if (type !== 'notify') return;
 
-      const m = smsg(sock, mek);
-      const body = String(m.body || m.text || '').trim();
-      const sender = m.sender || mek.key?.remoteJid;
-      if (!sender || !body.startsWith(PREFIX)) return;
+    for (const mek of messages || []) {
+      try {
+        if (!mek?.message || mek.key?.fromMe) continue;
 
-      if (db.touchUser) db.touchUser(sender);
-      const isOwner = isOwnerNumber(sender);
-      if (!isOwner && db.isBanned?.(sender)) return;
+        const m = smsg(sock, mek);
+        const body = String(m.body || m.text || '').trim();
+        const sender = m.sender || mek.key?.remoteJid;
+        if (!sender) continue;
 
-      const tokens = body.slice(PREFIX.length).trim().split(/\s+/);
-      const cmd = tokens.shift()?.toLowerCase();
-      if (!cmd) return;
-      const plugin = plugins.get(cmd);
-      if (!plugin) {
-        return m.reply(`❌ *${PREFIX}${cmd}* inconnue.\nTapez *${PREFIX}menu*`);
+        if (db.touchUser) db.touchUser(sender);
+        const isOwner = isOwnerNumber(sender);
+        if (!isOwner && db.isBanned?.(sender)) continue;
+
+        // Les protections de groupe doivent examiner aussi les messages ordinaires,
+        // pas uniquement les commandes précédées du préfixe.
+        const handledByGuard = await enforceGroupGuard({ sock, m, db, isOwner, logger });
+        if (handledByGuard) continue;
+
+        const prefix = String(config.PREFIX || '.');
+        if (!body.startsWith(prefix)) continue;
+
+        const tokens = body.slice(prefix.length).trim().split(/\s+/);
+        const cmd = tokens.shift()?.toLowerCase();
+        if (!cmd) continue;
+        const plugin = plugins.get(cmd);
+        if (!plugin) {
+          await m.reply('❌ *' + prefix + cmd + '* inconnue.\\nTapez *' + prefix + 'menu*');
+          continue;
+        }
+
+        const coolKey = sender + ':' + cmd;
+        const now = Date.now();
+        if (cooldowns.has(coolKey) && now - cooldowns.get(coolKey) < 2500) continue;
+        cooldowns.set(coolKey, now);
+
+        const isVip = isOwner || !!db.isVip?.(sender);
+        if (plugin.ownerOnly && !isOwner) { await m.reply('🔱 Réservé au propriétaire.'); continue; }
+        if (plugin.vipOnly && !isVip) { await m.reply('👑 Commande VIP.'); continue; }
+        if (plugin.groupOnly && !m.isGroup) { await m.reply('❌ Cette commande est réservée aux groupes.'); continue; }
+
+        await plugin.execute({
+          sock,
+          m,
+          args: tokens,
+          q: tokens.join(' '),
+          isOwner,
+          isVip,
+          config,
+          logger,
+          db,
+        });
+      } catch (e) {
+        logger.error('Handler: ' + (e?.stack || e));
       }
-
-      const coolKey = `${sender}:${cmd}`;
-      const now = Date.now();
-      if (cooldowns.has(coolKey) && now - cooldowns.get(coolKey) < 2500) return;
-      cooldowns.set(coolKey, now);
-
-      const isVip = isOwner || !!db.isVip?.(sender);
-      if (plugin.ownerOnly && !isOwner) return m.reply('🔱 Réservé au propriétaire.');
-      if (plugin.vipOnly && !isVip) return m.reply('👑 Commande VIP.');
-      if (plugin.groupOnly && !m.isGroup) return m.reply('❌ Cette commande est réservée aux groupes.');
-
-      await plugin.execute({
-        sock,
-        m,
-        args: tokens,
-        q: tokens.join(' '),
-        isOwner,
-        isVip,
-        config,
-        logger,
-        db,
-      });
-    } catch (e) {
-      logger.error(`Handler: ${e?.stack || e}`);
     }
   });
 
   sock.ev.on('group-participants.update', async ({ id, participants, action }) => {
-    if (action !== 'add') return;
+    if (action !== 'add' && action !== 'remove') return;
+
+    const settingKey = action === 'add' ? '__welcome_on__' : '__bye_on__';
+    if (db.getNote(id, settingKey) !== '1') return;
+
     try {
       const meta = await sock.groupMetadata(id);
-      for (const p of participants || []) {
-        await sock.sendMessage(id, {
-          text: `👋 Bienvenue *@${p.split('@')[0]}* dans *${meta.subject}*! 🎉`,
-          mentions: [p],
-        });
+      const messages = action === 'add'
+        ? welcomePlugin.welcomeMessages
+        : welcomePlugin.goodbyeMessages;
+      const storedStyle = action === 'add' ? db.getNote(id, '__welcome_style__') : null;
+      const parsedStyle = Number.parseInt(storedStyle, 10);
+      const styleIndex = Number.isInteger(parsedStyle) && parsedStyle >= 0 && parsedStyle < messages.length
+        ? parsedStyle
+        : Math.floor(Math.random() * messages.length);
+
+      for (const participant of participants || []) {
+        const jid = typeof participant === 'string'
+          ? participant
+          : participant?.id || participant?.jid;
+        if (!jid) continue;
+
+        const template = action === 'add'
+          ? messages[styleIndex]
+          : messages[Math.floor(Math.random() * messages.length)];
+        const rendered = welcomePlugin.formatMsg(
+          template,
+          '@' + String(jid).split('@')[0],
+          meta.subject || 'ce groupe',
+          meta.participants?.length || 0
+        );
+
+        await sock.sendMessage(id, { text: rendered, mentions: [jid] });
       }
     } catch (e) {
-      logger.warn(`Welcome: ${e.message}`);
+      logger.warn('Welcome/Bye: ' + e.message);
     }
   });
 }

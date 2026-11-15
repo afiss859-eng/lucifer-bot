@@ -45,7 +45,7 @@ const DEFIS = [
 ];
 
 module.exports = {
-  commands: ['horoscope','blague','joke','citation','quote','motdujour','fait','faitalea','defi','challenge'],
+  commands: ['horoscope','quote','motdujour','fait','faitalea','defi','challenge'],
   description: 'Horoscope, blagues, citations & défis',
   execute: async ({ m, args, q, config: cfg }) => {
     const cmd = m.body.slice(cfg.PREFIX.length).trim().split(' ')[0].toLowerCase();

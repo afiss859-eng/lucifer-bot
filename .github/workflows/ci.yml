@@ -33,6 +33,9 @@ jobs:
       - name: Load configuration and database
         run: node -e "require('./config/config'); const db=require('./database/db'); db.getData(); console.log('Core modules OK')"
 
+      - name: Run unit tests
+        run: node --test tests/*.test.js
+
       - name: Load all plugins
         run: node -e "require('./src/plugins').loadPlugins().then(m=>{console.log('Loaded commands:',m.size); if(!m.size) process.exit(1)}).catch(e=>{console.error(e);process.exit(1)})"
 

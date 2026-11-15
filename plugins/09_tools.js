@@ -6,9 +6,9 @@ module.exports = {
     'calc','math','age','bmi','password','uuid','base64e','base64d',
     'md5','sha256','binary','hex','reverse','upper','lower','count',
     'repeat','replace','emojify','ascii','morse','pig','leet',
-    'palindrome','anagram','wordcount','charcount','number','random',
+    'palindrome','anagram','wordcount','charcount','random',
     'percent','roman','temperature','distance','weight','speed2',
-    'area','volume','currency2','timestamp','timer2','countdown2',
+    'area','currency2','timestamp','timer2','countdown2',
   ],
   description: 'Outils utilitaires',
   execute: async ({ m, args, q, config: cfg }) => {

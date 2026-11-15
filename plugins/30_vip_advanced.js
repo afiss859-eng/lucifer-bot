@@ -25,16 +25,10 @@ function getVipTier(coins) {
 
 // ─── Items boutique ───────────────────────────────────────────────────────────
 const SHOP_ITEMS = {
-  shield:    { name: '🛡️ Bouclier',      price: 500,   desc: 'Protège contre le vol pendant 24h' },
-  sword:     { name: '⚔️ Épée',          price: 750,   desc: '+20% de gains au travail pendant 24h' },
-  ring:      { name: '💍 Bague',         price: 1200,  desc: 'Bonus +10% sur tous les gains' },
-  crown:     { name: '👑 Couronne',      price: 5000,  desc: 'Statut royal — +50% daily' },
-  dragon:    { name: '🐉 Dragon',        price: 10000, desc: 'Attaque les autres joueurs' },
-  inviscloak:{ name: '🧥 Cape invisible',price: 2000,  desc: 'Impossible d\'être volé 48h' },
-  lucky:     { name: '🍀 Trèfle lucky',  price: 800,   desc: '+30% chance au casino' },
-  bomb:      { name: '💣 Bombe',         price: 1500,  desc: 'Vole 20% des coins d\'un joueur' },
-  time:      { name: '⏰ Cristal temps', price: 3000,  desc: 'Réinitialise le cooldown daily' },
-  potion:    { name: '🧪 Potion x2',     price: 2500,  desc: 'Double les gains pendant 2h' },
+  sword:  { name: '⚔️ Épée',           price: 750,  desc: '+20% sur les gains de .vwork tant que l’objet est dans l’inventaire' },
+  lucky:  { name: '🍀 Trèfle chanceux', price: 800,  desc: 'Améliore les gains de .vslots3 tant que l’objet est dans l’inventaire' },
+  crown:  { name: '👑 Couronne',        price: 5000, desc: '+50% sur .vdaily tant que l’objet est dans l’inventaire' },
+  potion: { name: '🧪 Potion x2',       price: 2500, desc: 'Double .vdaily tant que l’objet est dans l’inventaire' },
 };
 
 // ─── Missions quotidiennes ─────────────────────────────────────────────────────
@@ -82,6 +76,10 @@ module.exports = {
     const vipRequired = ['vclan','vclanCreate','vclanWar','vboss','vduel','vuse'];
     if (vipRequired.includes(cmd) && !isVip) {
       return await m.reply(`👑 *Commande VIP Requise*\n\n*${cmd}* nécessite le statut VIP.\n\nContactez: wa.me/${cfg.OWNER_NUMBER}`);
+    }
+
+    if (['vclan', 'vclancreate', 'vclanjoin', 'vclanleave', 'vclaninfo', 'vclanwar'].includes(cmd.toLowerCase())) {
+      return m.reply('⚠️ Le système de clans est annoncé dans le menu, mais il n’est pas encore implémenté. Aucun changement n’a été effectué.');
     }
 
     switch (cmd) {
@@ -137,7 +135,7 @@ ${isVip ? '\n👑 *Membre VIP — Accès complet*' : '\n💡 Devenez VIP pour ac
         if (eco.inventory?.crown) reward = Math.floor(reward * 1.5);
 
         db.addCoins(jid, reward);
-        db.setEco(jid, { ...eco, lastVipDaily: now, xp: (eco.xp || 0) + 50 });
+        db.setEco(jid, { lastVipDaily: now, xp: (eco.xp || 0) + 50 });
 
         await m.reply(`💰 *Daily VIP — ${tier.label}*\n\n✅ Vous avez récupéré: *+${reward.toLocaleString()} coins*\n${hasPotion ? '🧪 Potion x2 appliquée!\n' : ''}${eco.inventory?.crown ? '👑 Bonus Couronne +50%!\n' : ''}\n💳 Solde: *${(coins + reward).toLocaleString()} coins*\n\nRevenez dans 20 heures!`);
         break;
@@ -213,12 +211,13 @@ ${isVip ? '\n👑 *Membre VIP — Accès complet*' : '\n💡 Devenez VIP pour ac
           return await m.reply(`❌ Item invalide.\n\nItems: ${Object.keys(SHOP_ITEMS).join(', ')}\n\nVoir la boutique: ${cfg.PREFIX}vshop`);
         }
         const item = SHOP_ITEMS[itemKey];
+        if ((eco.inventory || {})[itemKey]) return await m.reply('✅ Vous possédez déjà cet objet.');
         if (coins < item.price) return await m.reply(`❌ Pas assez de coins!\n\nPrix: ${item.price.toLocaleString()}\nVos coins: ${coins.toLocaleString()}`);
 
         db.addCoins(jid, -item.price);
         const inv = eco.inventory || {};
         inv[itemKey] = { bought: Date.now() };
-        db.setEco(jid, { ...eco, inventory: inv });
+        db.setEco(jid, { inventory: inv });
 
         await m.reply(`✅ *Achat réussi!*\n\n${item.name} acheté pour *${item.price.toLocaleString()} coins*\n\n${item.desc}\n\n💰 Solde restant: ${(coins - item.price).toLocaleString()} coins`);
         break;
@@ -235,12 +234,11 @@ ${isVip ? '\n👑 *Membre VIP — Accès complet*' : '\n💡 Devenez VIP pour ac
       case 'vuse': {
         const itemKey = args[0]?.toLowerCase();
         const inv = eco.inventory || {};
-        if (!itemKey || !inv[itemKey]) return await m.reply(`❌ Item non possédé. Voir: ${cfg.PREFIX}vinv`);
-        const item = SHOP_ITEMS[itemKey];
-        delete inv[itemKey];
-        db.setEco(jid, { ...eco, inventory: inv });
-        await m.reply(`✅ *${item?.name}* utilisé!\n\n${item?.desc}`);
-        break;
+        if (!itemKey || !inv[itemKey]) return await m.reply(`❌ Objet non possédé. Voir: ${cfg.PREFIX}vinv`);
+        if (!SHOP_ITEMS[itemKey]) {
+          return await m.reply('⚠️ Cet ancien objet ne dispose pas encore d’un effet programmé. Il n’a pas été consommé.');
+        }
+        return await m.reply(`ℹ️ *${SHOP_ITEMS[itemKey].name}* est un bonus passif. Son effet s’applique automatiquement tant qu’il reste dans votre inventaire. Aucun objet n’a été consommé.`);
       }
 
       // ─── Missions ────────────────────────────────────────────────────────────
@@ -261,28 +259,28 @@ ${isVip ? '\n👑 *Membre VIP — Accès complet*' : '\n💡 Devenez VIP pour ac
       case 'vboss': {
         const boss = BOSSES[randomInt(0, BOSSES.length - 1)];
         await m.reply(`⚔️ *Boss Apparu!*\n\n${boss.name}\n❤️ HP: ${boss.hp}\n💰 Récompense: ${boss.reward.toLocaleString()} coins\n⭐ XP: ${boss.xp}\n\nAttaquez: ${cfg.PREFIX}vattack\n\n_Soyez rapide, d'autres joueurs peuvent aussi l'attaquer!_`);
-        db.setNote('__boss__', 'current', JSON.stringify({ ...boss, spawnedAt: Date.now(), spawnedBy: jid }));
+        db.saveNote('__shared__', '__boss__', JSON.stringify({ ...boss, spawnedAt: Date.now(), spawnedBy: jid }));
         break;
       }
 
       case 'vattack': {
-        const bossData = db.getNote('__boss__', 'current');
+        const bossData = db.getNote('__shared__', '__boss__');
         if (!bossData) return await m.reply(`❌ Aucun boss actif!\n\nInvoquez un boss: ${cfg.PREFIX}vboss`);
         const boss = JSON.parse(bossData);
         if (Date.now() - boss.spawnedAt > 60000) {
-          db.setNote('__boss__', 'current', null);
+          db.saveNote('__shared__', '__boss__', null);
           return await m.reply(`💀 Le boss *${boss.name}* a disparu! (timeout 1 min)`);
         }
         const dmg = randomInt(50, 200) + (eco.inventory?.sword ? 50 : 0);
         const remaining = boss.hp - dmg;
         if (remaining <= 0) {
-          db.setNote('__boss__', 'current', null);
+          db.saveNote('__shared__', '__boss__', null);
           db.addCoins(jid, boss.reward);
-          db.setEco(jid, { ...eco, xp: (eco.xp || 0) + boss.xp });
+          db.setEco(jid, { xp: (eco.xp || 0) + boss.xp });
           await m.reply(`🏆 *Boss Vaincu!*\n\n${boss.name} a été éliminé!\n\n⚔️ Dégâts infligés: *${dmg}*\n💰 Récompense: *+${boss.reward.toLocaleString()} coins*\n⭐ XP: *+${boss.xp}*`);
         } else {
           boss.hp = remaining;
-          db.setNote('__boss__', 'current', JSON.stringify(boss));
+          db.saveNote('__shared__', '__boss__', JSON.stringify(boss));
           await m.reply(`⚔️ *Attaque!*\n\n${boss.name}\n💥 Dégâts: *${dmg}*\n❤️ HP restant: *${remaining}*\n\nContinuez d'attaquer: ${cfg.PREFIX}vattack`);
         }
         break;
@@ -292,11 +290,14 @@ ${isVip ? '\n👑 *Membre VIP — Accès complet*' : '\n💡 Devenez VIP pour ac
       case 'vduel': {
         const mentioned = m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
         if (!mentioned) return await m.reply(`⚔️ *Duel*\n\nMentionnez un adversaire: ${cfg.PREFIX}vduel @joueur [mise]\n\nEx: ${cfg.PREFIX}vduel @adversaire 500`);
-        const bet = parseInt(args[1]) || 200;
+        if (mentioned === jid) return await m.reply('❌ Vous ne pouvez pas vous défier vous-même.');
+        const bet = args[1] === undefined ? 200 : Number(args[1]);
+        if (!Number.isSafeInteger(bet) || bet < 10) return await m.reply('❌ La mise doit être un nombre entier d’au moins 10 coins.');
         if (bet > coins) return await m.reply(`❌ Pas assez de coins. Vous avez: ${coins}`);
 
         const enemyEco = db.getEco(mentioned);
         const enemyCoins = enemyEco.coins || 0;
+        if (enemyCoins < bet) return await m.reply(`❌ Cet adversaire n’a pas assez de coins pour couvrir la mise (${enemyCoins} disponibles).`);
 
         const yourPow = randomInt(1, 100) + (eco.inventory?.sword ? 20 : 0);
         const enemyPow = randomInt(1, 100) + (enemyEco.inventory?.sword ? 20 : 0);
@@ -332,13 +333,14 @@ ${isVip ? '\n👑 *Membre VIP — Accès complet*' : '\n💡 Devenez VIP pour ac
       // ─── Gift ────────────────────────────────────────────────────────────────
       case 'vgift': {
         const mentioned = m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
-        const amount = parseInt(args[1]) || parseInt(args[0]) || 100;
+        const amount = args[1] === undefined ? 100 : Number(args[1]);
         if (!mentioned) return await m.reply(`🎁 Usage: ${cfg.PREFIX}vgift @utilisateur [montant]`);
+        if (!Number.isSafeInteger(amount) || amount < 10) return await m.reply('❌ Le montant doit être un entier d’au moins 10 coins.');
         if (amount > coins) return await m.reply(`❌ Vous n'avez que ${coins} coins.`);
         if (amount < 10) return await m.reply('❌ Minimum 10 coins.');
         db.addCoins(jid, -amount);
         db.addCoins(mentioned, amount);
-        await m.reply(`🎁 *Cadeau envoyé!*\n\nVous avez offert *${amount.toLocaleString()} coins* à @${mentioned.split('@')[0]}\n\n💰 Votre solde: ${(coins - amount).toLocaleString()} coins`, [mentioned]);
+        await m.reply(`🎁 *Cadeau envoyé!*\n\nVous avez offert *${amount.toLocaleString()} coins* à @${mentioned.split('@')[0]}\n\n💰 Votre solde: ${(coins - amount).toLocaleString()} coins`, { mentions: [mentioned] });
         break;
       }
 
@@ -369,7 +371,8 @@ ${isVip ? '\n👑 *Membre VIP — Accès complet*' : '\n💡 Devenez VIP pour ac
 
       case 'vcasino': {
         if (!isVip) return await m.reply(`👑 *Casino VIP*\n\nRéservé aux membres VIP.\nContactez: wa.me/${cfg.OWNER_NUMBER}`);
-        const bet = parseInt(args[0]) || 200;
+        const bet = args[0] === undefined ? 200 : Number(args[0]);
+        if (!Number.isSafeInteger(bet) || bet < 10) return await m.reply('❌ La mise doit être un nombre entier d’au moins 10 coins.');
         if (bet > coins) return await m.reply(`❌ Mise trop élevée. Coins: ${coins}`);
         const games = ['🎰 Slots', '🃏 Blackjack', '🎲 Dés', '🎡 Roulette'];
         const outcomes = [0.5, 0, 2, 3, 0, 1.5, 0, 5];
@@ -392,7 +395,7 @@ ${isVip ? '\n👑 *Membre VIP — Accès complet*' : '\n💡 Devenez VIP pour ac
         const base = randomInt(200, 600);
         const earned = hasSword ? Math.floor(base * 1.2) : base;
         db.addCoins(jid, earned);
-        db.setEco(jid, { ...eco, lastVipWork: now, xp: (eco.xp || 0) + 20 });
+        db.setEco(jid, { lastVipWork: now, xp: (eco.xp || 0) + 20 });
         const jobs = ['🔧 Technicien', '💻 Développeur', '🎤 Artiste', '📦 Livreur', '🔮 Mage noir', '⚔️ Mercenaire'];
         await m.reply(`💼 *VIP Work*\n\n${jobs[randomInt(0, jobs.length-1)]} — Travail accompli!\n\n💰 Gain: *+${earned} coins*${hasSword ? ' (⚔️ +20%)' : ''}\n⭐ XP: +20\n\nSolde: ${(coins + earned).toLocaleString()} coins`);
         break;

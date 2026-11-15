@@ -117,7 +117,12 @@ Testez avec: `.ai Bonjour, comment ça va?`
 .antispam        → Bloquer le spam
 .antibadword     → Filtrer les mots vulgaires
 .antivulgaire    → Bloquer les insultes
+.antiinvite       → Bloquer les invitations WhatsApp
+.antiforward      → Bloquer les messages transférés
+.antitag          → Limiter les mentions massives
 ```
+
+Les 19 protections prises en charge sont : `antilink`, `antiinvite`, `antispam`, `antiflood`, `antibadword`, `antivulgaire`, `antiinsult`, `antithreat`, `antiscam`, `antiads`, `antiforward`, `antisticker`, `antiaudio`, `antivideo`, `antiimage`, `antidoc`, `antigif`, `antiviewonce` et `antitag`. Les autres alias anti ne sont pas encore implémentés et ne prétendent pas activer une protection. Le bot doit être administrateur du groupe pour supprimer les messages.
 
 ---
 

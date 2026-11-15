@@ -74,7 +74,14 @@ function setEco(jid, patch) {
 }
 
 function getCoins(jid) { return loadDB('economy')[jid]?.coins || 0; }
-function addCoins(jid, amount) { const d = loadDB('economy'); if (!d[jid]) d[jid] = { coins: 0, lastDaily: 0, lastWork: 0 }; d[jid].coins += Number(amount) || 0; saveDB('economy', d); return d[jid].coins; }
+function addCoins(jid, amount) {
+  if (!jid || !Number.isFinite(Number(amount))) throw new TypeError('Utilisateur et montant valide requis.');
+  const d = loadDB('economy');
+  if (!d[jid]) d[jid] = { coins: 0, lastDaily: 0, lastWork: 0 };
+  d[jid].coins = Math.max(0, Math.trunc((Number(d[jid].coins) || 0) + Number(amount)));
+  saveDB('economy', d);
+  return d[jid].coins;
+}
 function removeCoins(jid, amount) { const d = loadDB('economy'); if (!d[jid]) d[jid] = { coins: 0, lastDaily: 0, lastWork: 0 }; d[jid].coins = Math.max(0, d[jid].coins - (Number(amount) || 0)); saveDB('economy', d); return d[jid].coins; }
 function getLastDaily(jid) { return loadDB('economy')[jid]?.lastDaily || 0; }
 function setLastDaily(jid) { const d = loadDB('economy'); if (!d[jid]) d[jid] = { coins: 0, lastDaily: 0, lastWork: 0 }; d[jid].lastDaily = Date.now(); saveDB('economy', d); }

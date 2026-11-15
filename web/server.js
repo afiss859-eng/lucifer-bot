@@ -21,6 +21,9 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const sessions = new Set();
+const loginAttempts = new Map();
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_ATTEMPTS = 5;
 const TOK_FILE = path.join(__dirname, '..', 'database', 'admin_tokens.json');
 
 function loadTokens() {
@@ -43,13 +46,31 @@ function authMW(req, res, next) {
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 app.post('/api/login', (req, res) => {
-  const pass = String(req.body.password || '').trim();
+  const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+  const now = Date.now();
+  const previous = loginAttempts.get(ip);
+  const attempts = previous && now - previous.startedAt < LOGIN_WINDOW_MS
+    ? previous
+    : { count: 0, startedAt: now };
+
+  if (attempts.count >= LOGIN_MAX_ATTEMPTS) {
+    const retrySeconds = Math.max(1, Math.ceil((LOGIN_WINDOW_MS - (now - attempts.startedAt)) / 1000));
+    res.set('Retry-After', String(retrySeconds));
+    return res.status(429).json({ error: 'Trop de tentatives. Réessayez plus tard.' });
+  }
+
+  const pass = String(req.body.password || '');
   const expect = process.env.ADMIN_PASSWORD || config.ADMIN_PASSWORD;
   if (!expect) return res.status(503).json({ error: 'ADMIN_PASSWORD non configuré côté serveur.' });
   const a = Buffer.from(pass);
   const b = Buffer.from(String(expect));
-  if (!pass || a.length !== b.length || !crypto.timingSafeEqual(a, b))
+  if (!pass || a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+    attempts.count += 1;
+    loginAttempts.set(ip, attempts);
     return res.status(403).json({ error: 'Mot de passe incorrect.' });
+  }
+
+  loginAttempts.delete(ip);
   const token = crypto.randomBytes(32).toString('hex');
   sessions.add(token);
   saveTokens();
@@ -62,17 +83,21 @@ app.post('/api/logout', authMW, (req, res) => {
   res.json({ ok: true });
 });
 
-app.get('/api/status', (req, res) => res.json({
+app.get('/api/status', (req, res) => {
+  const authenticated = typeof req.headers['x-admin-token'] === 'string' &&
+    sessions.has(req.headers['x-admin-token']);
+  res.json({
   connected: _connected,
   botReady: !!_sock,
   botName: config.BOT_NAME || 'LUCIFERO',
   version: config.VERSION || '2.0',
-  owner: config.OWNER_NUMBER || '',
-  phone: _sock?.user?.id?.split(':')[0] || null,
+  owner: authenticated ? (config.OWNER_NUMBER || '') : null,
+  phone: authenticated ? (_sock?.user?.id?.split(':')[0] || null) : null,
   phoneSet: !!(process.env.PHONE_NUMBER || process.env.BOT_PHONE),
   groqReady: !!process.env.GROQ_API_KEY,
   geminiReady: !!process.env.GEMINI_API_KEY,
-}));
+  });
+});
 
 app.get('/api/paircode/poll', authMW, (req, res) => {
   const src = _pendingCode || (_getCodeFn ? _getCodeFn() : null);

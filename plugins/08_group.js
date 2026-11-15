@@ -1,3 +1,5 @@
+const { getGroupPermissions } = require('../src/group-permissions');
+
 module.exports = {
   commands: [
     'tagall','kick','add','promote','demote','groupinfo','linkgroup',
@@ -14,9 +16,29 @@ module.exports = {
       return true;
     };
 
+    const requireAdmin = async (needsBotAdmin = false) => {
+      if (!await requireGroup()) return false;
+      let permissions;
+      try {
+        permissions = await getGroupPermissions(sock, m.chat, m.sender);
+      } catch {
+        await m.reply('❌ Impossible de vérifier les permissions du groupe.');
+        return false;
+      }
+      if (!isOwner && !permissions.actorIsAdmin) {
+        await m.reply('❌ Cette action est réservée aux administrateurs du groupe.');
+        return false;
+      }
+      if (needsBotAdmin && !permissions.botIsAdmin) {
+        await m.reply('❌ Le bot doit aussi être administrateur pour effectuer cette action.');
+        return false;
+      }
+      return true;
+    };
+
     switch (cmd) {
       case 'tagall': {
-        if (!await requireGroup()) break;
+        if (!await requireAdmin(false)) break;
         const meta = await sock.groupMetadata(m.chat);
         const mems = meta.participants;
         const text = mems.map(p=>`@${p.id.split('@')[0]}`).join(' ');
@@ -24,10 +46,10 @@ module.exports = {
         break;
       }
       case 'kick': {
-        if (!await requireGroup()) break;
-        if (!isOwner && !isVip) return await m.reply('❌ Admin/Owner uniquement!');
-        const target = mentions[0] || (args[0]?.replace(/[^0-9]/g,'')+'@s.whatsapp.net');
-        if (!target || target==='@s.whatsapp.net') return await m.reply(`Usage: ${cfg.PREFIX}kick @membre`);
+        if (!await requireAdmin(true)) break;
+        const number = String(args[0] || '').replace(/\D/g, '');
+        const target = mentions[0] || (number ? `${number}@s.whatsapp.net` : null);
+        if (!target) return await m.reply(`Usage: ${cfg.PREFIX}kick @membre`);
         try {
           await sock.groupParticipantsUpdate(m.chat, [target], 'remove');
           await m.reply(`✅ @${target.split('@')[0]} exclu du groupe.`, { mentions: [target] });
@@ -35,8 +57,7 @@ module.exports = {
         break;
       }
       case 'add': {
-        if (!await requireGroup()) break;
-        if (!isOwner) return await m.reply('🔱 Propriétaire uniquement!');
+        if (!await requireAdmin(true)) break;
         const num = args[0]?.replace(/[^0-9]/g,'');
         if (!num) return await m.reply(`Usage: ${cfg.PREFIX}add [numéro]`);
         try {
@@ -46,8 +67,7 @@ module.exports = {
         break;
       }
       case 'promote': {
-        if (!await requireGroup()) break;
-        if (!isOwner) return await m.reply('🔱 Propriétaire uniquement!');
+        if (!await requireAdmin(true)) break;
         const target = mentions[0];
         if (!target) return await m.reply(`Usage: ${cfg.PREFIX}promote @membre`);
         try {
@@ -57,8 +77,7 @@ module.exports = {
         break;
       }
       case 'demote': {
-        if (!await requireGroup()) break;
-        if (!isOwner) return await m.reply('🔱 Propriétaire uniquement!');
+        if (!await requireAdmin(true)) break;
         const target = mentions[0];
         if (!target) return await m.reply(`Usage: ${cfg.PREFIX}demote @membre`);
         try {
@@ -82,8 +101,7 @@ module.exports = {
         break;
       }
       case 'linkgroup': {
-        if (!await requireGroup()) break;
-        if (!isOwner && !isVip) return await m.reply('❌ Admin uniquement!');
+        if (!await requireAdmin(false)) break;
         try {
           const code = await sock.groupInviteCode(m.chat);
           await m.reply(`🔗 *Lien du groupe*\n\nhttps://chat.whatsapp.com/${code}`);
@@ -91,8 +109,7 @@ module.exports = {
         break;
       }
       case 'revoke': {
-        if (!await requireGroup()) break;
-        if (!isOwner) return await m.reply('🔱 Propriétaire uniquement!');
+        if (!await requireAdmin(true)) break;
         try {
           await sock.groupRevokeInvite(m.chat);
           await m.reply('✅ Lien du groupe révoqué! Un nouveau lien a été généré.');
@@ -100,30 +117,26 @@ module.exports = {
         break;
       }
       case 'open': {
-        if (!await requireGroup()) break;
-        if (!isOwner) return await m.reply('🔱 Propriétaire uniquement!');
+        if (!await requireAdmin(true)) break;
         await sock.groupSettingUpdate(m.chat, 'not_announcement');
         await m.reply('🔓 Groupe ouvert! Tous les membres peuvent envoyer des messages.');
         break;
       }
       case 'close': {
-        if (!await requireGroup()) break;
-        if (!isOwner) return await m.reply('🔱 Propriétaire uniquement!');
+        if (!await requireAdmin(true)) break;
         await sock.groupSettingUpdate(m.chat, 'announcement');
         await m.reply('🔒 Groupe fermé! Seuls les admins peuvent envoyer des messages.');
         break;
       }
       case 'setdesc': {
-        if (!await requireGroup()) break;
-        if (!isOwner) return await m.reply('🔱 Propriétaire uniquement!');
+        if (!await requireAdmin(true)) break;
         if (!q) return await m.reply(`Usage: ${cfg.PREFIX}setdesc [description]`);
         await sock.groupUpdateDescription(m.chat, q);
         await m.reply(`✅ Description mise à jour!\n\n${q}`);
         break;
       }
       case 'setname': {
-        if (!await requireGroup()) break;
-        if (!isOwner) return await m.reply('🔱 Propriétaire uniquement!');
+        if (!await requireAdmin(true)) break;
         if (!q) return await m.reply(`Usage: ${cfg.PREFIX}setname [nom]`);
         await sock.groupUpdateSubject(m.chat, q);
         await m.reply(`✅ Nom du groupe changé en: *${q}*`);
@@ -145,8 +158,7 @@ module.exports = {
         break;
       }
       case 'warn': {
-        if (!await requireGroup()) break;
-        if (!isOwner && !isVip) return await m.reply('❌ Admin uniquement!');
+        if (!await requireAdmin(false)) break;
         const target = mentions[0];
         if (!target) return await m.reply(`Usage: ${cfg.PREFIX}warn @membre`);
         const warns = db.addWarn(target);
@@ -176,15 +188,13 @@ module.exports = {
         break;
       }
       case 'mute': {
-        if (!await requireGroup()) break;
-        if (!isOwner) return await m.reply('🔱 Propriétaire uniquement!');
+        if (!await requireAdmin(true)) break;
         await sock.groupSettingUpdate(m.chat, 'announcement');
         await m.reply('🔇 Groupe en mode silencieux!');
         break;
       }
       case 'unmute': {
-        if (!await requireGroup()) break;
-        if (!isOwner) return await m.reply('🔱 Propriétaire uniquement!');
+        if (!await requireAdmin(true)) break;
         await sock.groupSettingUpdate(m.chat, 'not_announcement');
         await m.reply('🔊 Groupe réactivé!');
         break;

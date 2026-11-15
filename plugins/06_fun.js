@@ -71,7 +71,7 @@ const horoscopes = {
 
 module.exports = {
   commands: [
-    'joke','blague','citation','devinette','fact','faits','horoscope','zodiac',
+    'joke','blague','citation','devinette','fact','faits','zodiac',
     '8ball','ship','rate','choose','coinflip','dice','truth','dare',
     'compliment','insult','neverhaveiever','wyr','wouldyourather',
   ],

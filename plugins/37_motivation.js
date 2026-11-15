@@ -106,7 +106,7 @@ module.exports = {
     'motivation','inspire','motiv',
     'musique','music','domamusic','playlist',
     'video','domafilm','domavideo',
-    'domaimg','domaimage','domaimg','doma',
+    'domaimg','domaimage','doma',
     'listemusique','listvideos',
   ],
   description: 'Photos, musiques & vidéos de motivation DOMA',
