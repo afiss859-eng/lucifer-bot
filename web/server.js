@@ -74,14 +74,14 @@ app.get('/api/status', (req, res) => res.json({
   geminiReady: !!process.env.GEMINI_API_KEY,
 }));
 
-app.get('/api/paircode/poll', (req, res) => {
+app.get('/api/paircode/poll', authMW, (req, res) => {
   const src = _pendingCode || (_getCodeFn ? _getCodeFn() : null);
   if (src?.code && src.time && Date.now() - src.time < 180000)
     return res.json({ fresh: true, code: src.code, formatted: src.formatted, phone: src.phone });
   res.json({ fresh: false });
 });
 
-app.post('/api/paircode', async (req, res) => {
+app.post('/api/paircode', authMW, async (req, res) => {
   const phone = String(req.body.phone || '').replace(/\D/g, '');
   if (!phone || phone.length < 7) return res.status(400).json({ error: 'Numéro invalide.' });
   if (_connected) return res.status(400).json({ error: 'Bot déjà connecté!' });
@@ -135,6 +135,7 @@ app.post('/api/banned/add', authMW, (req, res) => dbAction(res, db => db.banUser
 app.post('/api/banned/remove', authMW, (req, res) => dbAction(res, db => db.unbanUser(jid(req)), 'Débanni.'));
 
 app.post('/api/broadcast', authMW, async (req, res) => {
+  return res.status(403).json({ error: 'Les envois groupés WhatsApp sont désactivés pour protéger les comptes.' });
   const message = String(req.body.message || '').trim();
   if (!message) return res.status(400).json({ error: 'Message requis.' });
   if (!_sock || !_connected) return res.status(503).json({ error: 'Bot non connecté.' });
