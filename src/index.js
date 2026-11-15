@@ -129,16 +129,20 @@ async function loadPluginsAndHandlers(sock) {
 async function startBot() {
   fs.ensureDirSync(SESSION_DIR);
   const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
-  const { version } = await fetchLatestBaileysVersion();
+  const versionInfo = await fetchLatestBaileysVersion().catch((error) => {
+    logger.warn(`Version WhatsApp indisponible (${error.message}); utilisation de la version par défaut de Baileys.`);
+    return null;
+  });
+  const version = versionInfo?.version;
 
-  logger.info(`🟡 Baileys v${version.join('.')} | registered=${state.creds.registered}`);
+  logger.info(`${version ? `🟡 WhatsApp Web v${version.join('.')}` : '🟡 Version WhatsApp Web par défaut'} | registered=${state.creds.registered}`);
   const authKeys = makeCacheableSignalKeyStore
     ? makeCacheableSignalKeyStore(state.keys, silent)
     : state.keys;
   const browser = Browsers ? Browsers.ubuntu('Chrome') : ['Ubuntu', 'Chrome', '120.0.6099.71'];
 
   const currentSock = makeWASocket({
-    version,
+    ...(version ? { version } : {}),
     logger: silent,
     printQRInTerminal: false,
     browser,
@@ -195,16 +199,11 @@ async function startBot() {
 
     const statusCode = new Boom(lastDisconnect?.error)?.output?.statusCode;
     const cleanLogout = statusCode === DisconnectReason.loggedOut;
-    const badSession = statusCode === DisconnectReason.badSession || [401, 403, 405].includes(statusCode);
+    const badSession = statusCode === DisconnectReason.badSession;
+    const rejectedSession = [403, 405].includes(statusCode);
 
-    if (badSession && !cleanLogout) {
-      try { await fs.emptyDir(SESSION_DIR); } catch {}
-      handlersLoaded = false;
-      reconnects = 0;
-      return setTimeout(startBot, 3000);
-    }
-    if (cleanLogout) {
-      logger.error('⛔ WhatsApp a fermé la session. Une nouvelle liaison est nécessaire.');
+    if (cleanLogout || badSession || rejectedSession) {
+      logger.error('⛔ Session WhatsApp refusée ou invalide. Arrêt des reconnexions automatiques : vérifiez le compte et reliez-le manuellement si nécessaire.');
       handlersLoaded = false;
       return;
     }
