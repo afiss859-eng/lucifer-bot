@@ -34,7 +34,7 @@ function trackFlood(chat, sender, now, tracker = floodTracker) {
 }
 
 function analyzeGroupMessage({
-  chat, sender, body, mtype, isForwarded, mentionCount = 0, db, now = Date.now(), tracker,
+  chat, sender, body, mtype, isViewOnce = false, isForwarded, mentionCount = 0, db, now = Date.now(), tracker,
 }) {
   if (!chat || !String(chat).endsWith('@g.us') || !sender) return null;
 
@@ -59,7 +59,7 @@ function analyzeGroupMessage({
   }
   if (isEnabled(db, chat, 'antiforward') && isForwarded) return 'Message transféré interdit';
   if (isEnabled(db, chat, 'antitag') && mentionCount > 5) return 'Mention massive interdite';
-  if (isEnabled(db, chat, 'antiviewonce') && /viewonce/i.test(String(mtype || ''))) return 'Média à vue unique interdit';
+  if (isEnabled(db, chat, 'antiviewonce') && (isViewOnce || /viewonce/i.test(String(mtype || '')))) return 'Média à vue unique interdit';
   if (isEnabled(db, chat, 'antisticker') && /sticker/i.test(String(mtype || ''))) return 'Autocollants interdits';
   if (isEnabled(db, chat, 'antiaudio') && /audio|ptt/i.test(String(mtype || ''))) return 'Messages audio interdits';
   if (isEnabled(db, chat, 'antivideo') && /video/i.test(String(mtype || ''))) return 'Vidéos interdites';
@@ -101,6 +101,7 @@ async function enforceGroupGuard({ sock, m, db, isOwner = false, logger }) {
     sender: m.sender,
     body,
     mtype: m.mtype,
+    isViewOnce: !!m.isViewOnce,
     isForwarded: !!contextInfo.isForwarded || Number(contextInfo.forwardingScore) > 0,
     mentionCount,
     db,
