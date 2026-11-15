@@ -95,6 +95,7 @@ if [ ! -f ".env" ]; then
   JWT_SECRET_VALUE=$(node -e "console.log(require('crypto').randomBytes(48).toString('hex'))")
 
   sed -i "s/OWNER_NUMBER=.*/OWNER_NUMBER=${OWNER_NUM}/" .env
+  sed -i "s/PHONE_NUMBER=.*/PHONE_NUMBER=${OWNER_NUM}/" .env
   sed -i "s/ADMIN_PASSWORD=.*/ADMIN_PASSWORD=${ADMIN_PASS}/" .env
   sed -i "s/PANEL_PASSWORD=.*/PANEL_PASSWORD=${ADMIN_PASS}/" .env
   sed -i "s/JWT_SECRET=.*/JWT_SECRET=${JWT_SECRET_VALUE}/" .env
