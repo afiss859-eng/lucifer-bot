@@ -125,7 +125,7 @@ module.exports = {
   parseDuration,
   formatMs,
 
-  execute: async ({ m, args, config: cfg, db }) => {
+  execute: async ({ sock, m, args, config: cfg, db, logger }) => {
     const cmd = m.body.slice(cfg.PREFIX.length).trim().split(/\s+/)[0].toLowerCase();
     const ownerJid = m.sender;
     const chat = m.chat;
@@ -176,11 +176,8 @@ module.exports = {
 
         try {
           db.addReminder(entry);
-          if (activeSocket !== sockForMessage(m, activeSocket)) {
-            // Le socket peut être initialisé par le cycle principal; aucune opération
-            // n'est effectuée ici si le plugin est invoqué hors de ce cycle.
-          }
-          if (activeSocket && activeDb === db) scheduleDelivery(entry);
+          if (activeSocket !== sock || activeDb !== db) initialize(sock, db, logger);
+          scheduleDelivery(entry);
         } catch (error) {
           return m.reply(`❌ Impossible d’enregistrer le rappel : ${error.message}`);
         }
@@ -222,9 +219,3 @@ module.exports = {
     }
   },
 };
-
-// Retained as a small internal guard so the timer module cannot assume a socket
-// exists before its initialize() method is called.
-function sockForMessage(_message, socket) {
-  return socket;
-}
