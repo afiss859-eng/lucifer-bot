@@ -5,7 +5,7 @@
 const axios = require('axios');
 
 module.exports = {
-  commands: ['wiki','wikipedia','define','definition','calc','calcul','convert','convertir','couleur','color'],
+  commands: ['wiki','wikipedia','define','definition','calcul','convert','convertir','couleur',],
   description: 'Wikipedia, définitions, calcul & conversion',
   execute: async ({ m, args, q, config: cfg }) => {
     const cmd = m.body.slice(cfg.PREFIX.length).trim().split(' ')[0].toLowerCase();
