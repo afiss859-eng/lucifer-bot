@@ -102,7 +102,7 @@ module.exports = {
   commands: [
     'chat', 'gpt', 'gemini2', 'ia', 'aistory',
     'aitranslate', 'aipoem', 'aisummary', 'aicorrect',
-    'aihelp', 'aistory', 'aireset', 'aistats2',
+    'aihelp', 'aireset', 'aistats2',
   ],
   description: 'Intelligence Artificielle (IA)',
 
