@@ -45,7 +45,15 @@ function scheduleUsersFlush() {
 }
 
 function getData() {
-  return { users: loadDB('users'), vip: loadDB('vip'), banned: loadDB('banned'), warn: loadDB('warn'), economy: loadDB('economy'), notes: loadDB('notes') };
+  return {
+    users: loadDB('users'),
+    vip: loadDB('vip'),
+    banned: loadDB('banned'),
+    warn: loadDB('warn'),
+    economy: loadDB('economy'),
+    notes: loadDB('notes'),
+    reminders: loadDB('reminders'),
+  };
 }
 
 function isVip(jid) { return !!loadDB('vip')[jid]; }
@@ -94,4 +102,57 @@ function getNote(chat, name) { return loadDB('notes')[chat]?.[name] || null; }
 function deleteNote(chat, name) { const d = loadDB('notes'); if (d[chat]) delete d[chat][name]; saveDB('notes', d); }
 function listNotes(chat) { return Object.keys(loadDB('notes')[chat] || {}); }
 
-module.exports = { touchUser, getData, getEco, setEco, isVip, addVip, removeVip, listVip, isBanned, banUser, unbanUser, getWarns, addWarn, resetWarn, getCoins, addCoins, removeCoins, getLastDaily, setLastDaily, getLastWork, setLastWork, getRichList, saveNote, getNote, deleteNote, listNotes };
+function addReminder(reminder) {
+  if (!reminder || typeof reminder !== 'object' || Array.isArray(reminder)) {
+    throw new TypeError('Données de rappel invalides.');
+  }
+  const { id, ownerJid, chat, text, dueAt, createdAt, type } = reminder;
+  if (!id || !ownerJid || !chat || !String(text || '').trim() ||
+      !Number.isFinite(Number(dueAt)) || !Number.isFinite(Number(createdAt)) ||
+      !['reminder', 'timer'].includes(type)) {
+    throw new TypeError('Identifiant, propriétaire, discussion, texte, dates et type sont requis.');
+  }
+
+  const data = loadDB('reminders');
+  const key = `${ownerJid}:${id}`;
+  if (data[key]) throw new Error('Cet identifiant de rappel existe déjà.');
+  const record = {
+    id: String(id),
+    ownerJid: String(ownerJid),
+    chat: String(chat),
+    text: String(text).trim(),
+    dueAt: Number(dueAt),
+    createdAt: Number(createdAt),
+    durationLabel: String(reminder.durationLabel || ''),
+    type,
+  };
+  data[key] = record;
+  saveDB('reminders', data);
+  return record;
+}
+
+function getReminders(ownerJid) {
+  if (!ownerJid) return [];
+  return Object.values(loadDB('reminders'))
+    .filter(item => item && item.ownerJid === ownerJid)
+    .sort((a, b) => Number(a.dueAt) - Number(b.dueAt));
+}
+
+function getAllReminders() {
+  return Object.values(loadDB('reminders'))
+    .filter(item => item && item.id && item.ownerJid && item.chat && Number.isFinite(Number(item.dueAt)))
+    .sort((a, b) => Number(a.dueAt) - Number(b.dueAt));
+}
+
+function removeReminder(ownerJid, id) {
+  if (!ownerJid || !id) return false;
+  const data = loadDB('reminders');
+  const key = `${ownerJid}:${id}`;
+  const record = data[key];
+  if (!record || record.ownerJid !== ownerJid) return false;
+  delete data[key];
+  saveDB('reminders', data);
+  return true;
+}
+
+module.exports = { touchUser, getData, getEco, setEco, isVip, addVip, removeVip, listVip, isBanned, banUser, unbanUser, getWarns, addWarn, resetWarn, getCoins, addCoins, removeCoins, getLastDaily, setLastDaily, getLastWork, setLastWork, getRichList, saveNote, getNote, deleteNote, listNotes, addReminder, getReminders, getAllReminders, removeReminder };
