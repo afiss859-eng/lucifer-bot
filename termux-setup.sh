@@ -25,8 +25,11 @@ read -r -p 'Clé Groq (laisser vide pour configurer plus tard): ' GROQ_KEY
 
 set_env OWNER_NUMBER "$PHONE"
 set_env PHONE_NUMBER "$PHONE"
-set_env ADMIN_PASSWORD "7217"
-set_env PANEL_PASSWORD "7217"
+ADMIN_PASS=$(node -e "console.log(require('crypto').randomBytes(18).toString('base64url'))")
+JWT_SECRET_VALUE=$(node -e "console.log(require('crypto').randomBytes(48).toString('hex'))")
+set_env ADMIN_PASSWORD "$ADMIN_PASS"
+set_env PANEL_PASSWORD "$ADMIN_PASS"
+set_env JWT_SECRET "$JWT_SECRET_VALUE"
 set_env HNSEC_ENABLED "false"
 
 if command -v openssl >/dev/null 2>&1; then
@@ -43,5 +46,6 @@ npm install
 
 echo
 echo 'Configuration Termux terminée.'
+echo "Mot de passe du dashboard (à conserver en lieu sûr) : $ADMIN_PASS"
 echo 'Lance le bot avec: npm start'
 echo 'Ne partage jamais le fichier .env.'

@@ -84,11 +84,22 @@ if [ ! -f ".env" ]; then
   echo -e "${GOLD}═══════════════════════════════════════════${NC}"
 
   read -p "  Votre numéro WhatsApp (ex: 584265781353): " OWNER_NUM
-  read -p "  Mot de passe admin panel (défaut: lucifer2024): " ADMIN_PASS
-  ADMIN_PASS=${ADMIN_PASS:-lucifer2024}
+  read -p "  Mot de passe admin (laisser vide pour en générer un): " ADMIN_PASS
+  if [ -z "$ADMIN_PASS" ]; then
+    ADMIN_PASS=$(node -e "console.log(require('crypto').randomBytes(18).toString('base64url'))")
+  fi
+  if [ ${#ADMIN_PASS} -lt 12 ]; then
+    echo "  Le mot de passe doit contenir au moins 12 caractères."
+    exit 1
+  fi
+  JWT_SECRET_VALUE=$(node -e "console.log(require('crypto').randomBytes(48).toString('hex'))")
 
   sed -i "s/OWNER_NUMBER=.*/OWNER_NUMBER=${OWNER_NUM}/" .env
+  sed -i "s/PHONE_NUMBER=.*/PHONE_NUMBER=${OWNER_NUM}/" .env
   sed -i "s/ADMIN_PASSWORD=.*/ADMIN_PASSWORD=${ADMIN_PASS}/" .env
+  sed -i "s/PANEL_PASSWORD=.*/PANEL_PASSWORD=${ADMIN_PASS}/" .env
+  sed -i "s/JWT_SECRET=.*/JWT_SECRET=${JWT_SECRET_VALUE}/" .env
+  echo "  Mot de passe du dashboard (à conserver): $ADMIN_PASS"
 
   echo ""
   echo -e "${GOLD}  IA Groq (GRATUIT — recommandé)${NC}"

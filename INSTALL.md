@@ -13,7 +13,8 @@ git clone https://github.com/afiss859-eng/lucifer-bot.git
 cd lucifer-bot
 npm install
 cp .env.example .env
-nano .env        # Éditez le fichier (mot de passe admin, clés IA...)
+nano .env        # Configurez OWNER_NUMBER, PHONE_NUMBER et vos clés IA
+node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"  # JWT_SECRET si vous utilisez le panel SaaS
 npm start
 ```
 
@@ -36,11 +37,18 @@ npm start
 
 ---
 
+## 🔐 Configuration de sécurité
+
+- Définissez un mot de passe long et unique dans `ADMIN_PASSWORD`.
+- Pour le panel SaaS séparé, définissez `JWT_SECRET` avec au moins 32 caractères aléatoires.
+- Ne publiez jamais `.env` ni le dossier de session WhatsApp.
+- Les envois groupés automatiques sont désactivés pour protéger le compte.
+
 ## 🌐 Connexion au Bot (via Dashboard)
 
 1. Démarrez le bot: `npm start`
 2. Ouvrez votre navigateur: **http://localhost:3000** (ou l'IP de votre serveur)
-3. Connectez-vous avec votre mot de passe admin (défaut: `lucifer2024`)
+3. Connectez-vous avec le mot de passe `ADMIN_PASSWORD` défini dans `.env` (le script Termux en génère un aléatoire).
 4. Choisissez votre méthode de connexion:
 
 ### 📷 Méthode 1 — QR Code

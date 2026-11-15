@@ -61,6 +61,18 @@ function getWarns(jid) { return loadDB('warn')[jid] || 0; }
 function addWarn(jid) { const d = loadDB('warn'); d[jid] = (d[jid] || 0) + 1; saveDB('warn', d); return d[jid]; }
 function resetWarn(jid) { const d = loadDB('warn'); d[jid] = 0; saveDB('warn', d); }
 
+function getEco(jid) {
+  const current = loadDB('economy')[jid];
+  return current && typeof current === 'object' ? { coins: 0, lastDaily: 0, lastWork: 0, ...current } : { coins: 0, lastDaily: 0, lastWork: 0 };
+}
+function setEco(jid, patch) {
+  if (!jid || !patch || typeof patch !== 'object' || Array.isArray(patch)) throw new TypeError('Utilisateur et données économiques requis.');
+  const data = loadDB('economy');
+  data[jid] = { ...getEco(jid), ...patch, coins: Math.max(0, Number(patch.coins ?? getEco(jid).coins) || 0) };
+  saveDB('economy', data);
+  return data[jid];
+}
+
 function getCoins(jid) { return loadDB('economy')[jid]?.coins || 0; }
 function addCoins(jid, amount) { const d = loadDB('economy'); if (!d[jid]) d[jid] = { coins: 0, lastDaily: 0, lastWork: 0 }; d[jid].coins += Number(amount) || 0; saveDB('economy', d); return d[jid].coins; }
 function removeCoins(jid, amount) { const d = loadDB('economy'); if (!d[jid]) d[jid] = { coins: 0, lastDaily: 0, lastWork: 0 }; d[jid].coins = Math.max(0, d[jid].coins - (Number(amount) || 0)); saveDB('economy', d); return d[jid].coins; }
@@ -75,4 +87,4 @@ function getNote(chat, name) { return loadDB('notes')[chat]?.[name] || null; }
 function deleteNote(chat, name) { const d = loadDB('notes'); if (d[chat]) delete d[chat][name]; saveDB('notes', d); }
 function listNotes(chat) { return Object.keys(loadDB('notes')[chat] || {}); }
 
-module.exports = { touchUser, getData, isVip, addVip, removeVip, listVip, isBanned, banUser, unbanUser, getWarns, addWarn, resetWarn, getCoins, addCoins, removeCoins, getLastDaily, setLastDaily, getLastWork, setLastWork, getRichList, saveNote, getNote, deleteNote, listNotes };
+module.exports = { touchUser, getData, getEco, setEco, isVip, addVip, removeVip, listVip, isBanned, banUser, unbanUser, getWarns, addWarn, resetWarn, getCoins, addCoins, removeCoins, getLastDaily, setLastDaily, getLastWork, setLastWork, getRichList, saveNote, getNote, deleteNote, listNotes };

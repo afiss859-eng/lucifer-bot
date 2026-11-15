@@ -2,7 +2,10 @@
 const jwt = require('jsonwebtoken');
 const { Users } = require('../db/database');
 
-const SECRET = process.env.JWT_SECRET || 'lucifero-secret-jwt-2024-change-me';
+const SECRET = String(process.env.JWT_SECRET || '');
+if (SECRET.length < 32) {
+  throw new Error('JWT_SECRET absent ou trop court : configurez au moins 32 caractères aléatoires dans .env.');
+}
 
 function signToken(userId) {
   return jwt.sign({ userId }, SECRET, { expiresIn: '7d' });

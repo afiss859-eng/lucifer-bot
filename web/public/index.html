@@ -149,8 +149,7 @@ textarea{height:100px;resize:vertical}
     <div class="lerr" id="lErr"></div>
     <div class="lok"  id="lOk"></div>
     <div class="lhint">
-      Mot de passe = variable <code>ADMIN_PASSWORD</code> sur Render<br>
-      Valeur par défaut : <code>lucifer2024</code>
+      Mot de passe = variable <code>ADMIN_PASSWORD</code> configurée dans le fichier <code>.env</code>.
     </div>
   </div>
 </div>
@@ -766,7 +765,7 @@ async function doCoins() { const j=document.getElementById('cJid').value.trim(),
 
 // ── HTTP utils ────────────────────────────────────────────────────────────────
 async function jFetch(url,method='GET',body=null) {
-  const opts={method,headers:{'Content-Type':'application/json'}};
+  const opts={method,headers:{'Content-Type':'application/json','x-admin-token':token||''}};
   if(body) opts.body=JSON.stringify(body);
   const r=await fetch(url,opts);
   const ct=r.headers.get('content-type')||'';

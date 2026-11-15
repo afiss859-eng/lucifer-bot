@@ -112,11 +112,8 @@ router.get('/settings', (req, res) => res.json(Settings.get()));
 router.patch('/settings', (req, res) => { Settings.update(req.body); res.json(Settings.get()); });
 
 // ── Broadcast WhatsApp bot ────────────────────────────────────────────────────
-router.post('/broadcast', async (req, res) => {
-  // This would integrate with the running bot instance
-  const { message } = req.body;
-  if (!message) return res.status(400).json({ error: 'Message requis.' });
-  res.json({ message: 'Broadcast mis en file d\'attente.', note: 'Le bot doit être connecté.' });
+router.post('/broadcast', (req, res) => {
+  return res.status(403).json({ error: 'Les envois groupés WhatsApp sont désactivés pour protéger les comptes.' });
 });
 
 // ── Tickets support ───────────────────────────────────────────────────────────

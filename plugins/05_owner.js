@@ -25,9 +25,7 @@ module.exports = {
         break;
       }
       case 'broadcast': {
-        if (!q) return await m.reply(`Usage: ${cfg.PREFIX}broadcast [message]`);
-        await m.reply(`📢 Diffusion envoyée!\nMessage: ${q}`);
-        break;
+        return await m.reply('📢 Envoi massif désactivé pour protéger votre compte WhatsApp. Utilisez uniquement les messages individuels attendus par leurs destinataires.');
       }
       case 'clearwarn': {
         const target = m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
