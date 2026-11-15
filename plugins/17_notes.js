@@ -1,5 +1,5 @@
 module.exports = {
-  commands: ['save','get','del','notes','note','reminder','todo','addtodo','deltodo','listtodo'],
+  commands: ['save','get','del','notes','note','todo','addtodo','deltodo','listtodo'],
   description: 'Notes et rappels',
   execute: async ({ m, args, q, config: cfg, db }) => {
     const cmd = m.body.slice(cfg.PREFIX.length).trim().split(' ')[0].toLowerCase();
@@ -41,11 +41,7 @@ module.exports = {
         await m.reply(`📋 *Toutes vos notes (${list.length})*\n\n${list.map((n,i)=>`${i+1}. 📌 ${n}`).join('\n')}`);
         break;
       }
-      case 'reminder': {
-        if (!q) return await m.reply(`Usage: ${cfg.PREFIX}reminder [texte]\nEx: ${cfg.PREFIX}reminder Appeler maman à 18h`);
-        await m.reply(`⏰ *Rappel créé!*\n\n📌 ${q}\n\n_Note: Les rappels sont stockés mais non automatiques dans cette version._`);
-        break;
-      }
+
       case 'todo':
       case 'listtodo': {
         const todos = db.getNote(m.chat, '__todo__') || '';
