@@ -21,6 +21,7 @@ module.exports = {
       wifi: `📶 *Problèmes WiFi Android*\n\n• Désactivez puis réactivez le WiFi\n• Oubliez le réseau et reconnectez-vous\n• Videz le cache WiFi: Paramètres → Apps → WiFi\n• Réinitialisez les paramètres réseau\n• Vérifiez si d'autres appareils se connectent`,
       camera: `📸 *Conseils Appareil Photo Android*\n\n• Nettoyez l'objectif régulièrement\n• Utilisez le mode HDR pour les photos en extérieur\n• Activez la grille pour un meilleur cadrage\n• Utilisez le minuteur pour éviter le flou\n• Mode pro pour un contrôle total`,
       settings: `⚙️ *Paramètres utiles Android*\n\n• Paramètres → Accessibilité → Options d'affichage\n• Paramètres → Sons → Ne pas déranger\n• Paramètres → Confidentialité → Gestionnaire d'autorisations\n• Paramètres → Batterie → Optimisation batterie\n• Paramètres → Développeurs → Options de débogage`,
+      volume: `🔊 *Volume du téléphone*\n\nUn bot WhatsApp ne peut pas modifier directement le volume de votre téléphone. Utilisez les boutons physiques de volume ou les réglages rapides Android.`,
       developer: `👨‍💻 *Mode Développeur Android*\n\nPour activer:\n1. Paramètres → À propos du téléphone\n2. Tapez 7 fois sur "Numéro de build"\n3. Retournez dans Paramètres\n4. Développeurs sera visible\n\nOptions utiles:\n• Débogage USB\n• Limites de processus en arrière-plan\n• Animation de fenêtres`,
     };
 
