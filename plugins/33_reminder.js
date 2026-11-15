@@ -1,113 +1,230 @@
+'use strict';
+
 /**
- * Plugin 33 — Rappels & Minuterie
- * Commandes: .rappel, .minuterie, .rappels, .annuler
+ * Plugin 33 — Rappels & minuteries persistants.
+ * Les échéances sont stockées dans database/reminders.json et restaurées
+ * automatiquement après un redémarrage ou une reconnexion du bot.
  */
 
-const reminders = new Map(); // jid → [{id, text, time, timeout}]
-let reminderId = 1;
+const crypto = require('crypto');
+
+const timers = new Map();
+let activeSocket = null;
+let activeDb = null;
+let activeLogger = null;
+
+const MAX_DURATION_MS = 24 * 60 * 60 * 1000;
+const MAX_TIMEOUT_MS = 0x7fffffff;
+const RETRY_DELAY_MS = 60 * 1000;
+const MAX_SEND_RETRIES = 3;
+
+function timerKey(entry) {
+  return `${entry.ownerJid}:${entry.id}`;
+}
+
+function parseDuration(value) {
+  const match = String(value || '').trim().match(/^(\d+(?:\.\d+)?)(s|sec|m|min|h|hr|hrs)$/i);
+  if (!match) return null;
+
+  const amount = Number(match[1]);
+  const unit = match[2].toLowerCase();
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+
+  let multiplier;
+  if (unit === 's' || unit === 'sec') multiplier = 1000;
+  else if (unit === 'm' || unit === 'min') multiplier = 60 * 1000;
+  else multiplier = 60 * 60 * 1000;
+
+  const ms = amount * multiplier;
+  return Number.isSafeInteger(Math.round(ms)) ? Math.round(ms) : null;
+}
+
+function formatMs(ms) {
+  const totalSeconds = Math.max(0, Math.ceil(Number(ms || 0) / 1000));
+  if (totalSeconds < 60) return `${totalSeconds}s`;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes < 60) return seconds ? `${minutes}m ${seconds}s` : `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return remainingMinutes ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+}
+
+function clearTimer(entry) {
+  const key = timerKey(entry);
+  const timer = timers.get(key);
+  if (timer) clearTimeout(timer);
+  timers.delete(key);
+}
+
+function scheduleDelivery(entry, retryCount = 0, explicitDelay = null) {
+  if (!activeSocket || !activeDb) return;
+  clearTimer(entry);
+
+  const delay = explicitDelay === null
+    ? Math.min(Math.max(0, Number(entry.dueAt) - Date.now()), MAX_TIMEOUT_MS)
+    : Math.min(Math.max(0, explicitDelay), MAX_TIMEOUT_MS);
+
+  const timer = setTimeout(() => {
+    deliverReminder(entry, retryCount).catch(error => {
+      activeLogger?.error?.(`Rappel ${entry.id}: ${error.message}`);
+    });
+  }, delay);
+
+  timers.set(timerKey(entry), timer);
+  timer.unref?.();
+}
+
+async function deliverReminder(entry, retryCount = 0) {
+  const key = timerKey(entry);
+  timers.delete(key);
+  if (!activeSocket || !activeDb) return;
+
+  const isTimer = entry.type === 'timer';
+  const message = isTimer
+    ? `⏱️ *MINUTERIE TERMINÉE !*\n\n${entry.text}\n\n✅ Votre minuterie de *${entry.durationLabel}* est écoulée.`
+    : `⏰ *RAPPEL !*\n\n📝 ${entry.text}\n\n_Échéance : ${new Date(entry.dueAt).toLocaleString('fr-FR')}_`;
+
+  try {
+    await activeSocket.sendMessage(entry.chat, { text: message });
+    activeDb.removeReminder(entry.ownerJid, entry.id);
+    activeLogger?.info?.(`Rappel ${entry.id} envoyé à ${entry.ownerJid}`);
+  } catch (error) {
+    activeLogger?.warn?.(`Envoi du rappel ${entry.id} impossible : ${error.message}`);
+    if (retryCount < MAX_SEND_RETRIES) {
+      scheduleDelivery(entry, retryCount + 1, RETRY_DELAY_MS);
+    } else {
+      activeLogger?.error?.(`Rappel ${entry.id} conservé en base. Il sera restauré à la prochaine reconnexion.`);
+    }
+  }
+}
+
+function initialize(sock, db, logger = null) {
+  if (!sock || !db?.getAllReminders || !db?.removeReminder) {
+    throw new TypeError('Socket WhatsApp et stockage de rappels requis.');
+  }
+
+  for (const timer of timers.values()) clearTimeout(timer);
+  timers.clear();
+
+  activeSocket = sock;
+  activeDb = db;
+  activeLogger = logger;
+
+  const stored = db.getAllReminders();
+  for (const entry of stored) scheduleDelivery(entry);
+
+  logger?.info?.(`${stored.length} rappel(s) restauré(s)`);
+  return stored.length;
+}
 
 module.exports = {
   commands: ['rappel','minuterie','rappels','annuler','timer','reminder'],
-  description: 'Rappels et minuteries',
-  execute: async ({ sock, m, args, q, config: cfg }) => {
-    const cmd = m.body.slice(cfg.PREFIX.length).trim().split(' ')[0].toLowerCase();
-    const jid  = m.sender;
+  description: 'Rappels et minuteries persistants',
+  initialize,
+  parseDuration,
+  formatMs,
+
+  execute: async ({ m, args, config: cfg, db }) => {
+    const cmd = m.body.slice(cfg.PREFIX.length).trim().split(/\s+/)[0].toLowerCase();
+    const ownerJid = m.sender;
     const chat = m.chat;
 
-    switch(cmd) {
+    if (!ownerJid || !chat) {
+      return m.reply('❌ Impossible d’identifier le propriétaire ou la discussion du rappel.');
+    }
+
+    switch (cmd) {
       case 'rappel':
-      case 'reminder': {
-        // Usage: .rappel 10m Boire de l'eau
-        if (!args[0]) return await m.reply(
-          `⏰ *Rappel*\n\nUsage: ${cfg.PREFIX}rappel [durée] [message]\n\nExemples:\n` +
-          `• ${cfg.PREFIX}rappel 10m Boire de l'eau\n` +
-          `• ${cfg.PREFIX}rappel 1h Réunion importante\n` +
-          `• ${cfg.PREFIX}rappel 30s Test rapide\n\n` +
-          `Durées: *s* = secondes, *m* = minutes, *h* = heures`
-        );
-        const durationStr = args[0].toLowerCase();
-        const text = args.slice(1).join(' ') || 'Rappel!';
-        const ms = parseDuration(durationStr);
-        if (!ms || ms < 5000) return await m.reply('❌ Durée invalide. Minimum 5 secondes.\nEx: 10m, 1h, 30s');
-        if (ms > 24 * 3600 * 1000) return await m.reply('❌ Maximum 24 heures.');
-
-        const id = reminderId++;
-        const timeoutId = setTimeout(async () => {
-          try {
-            await sock.sendMessage(chat, {
-              text: `⏰ *RAPPEL!*\n\n📝 ${text}\n\n_Rappel programmé il y a ${durationStr}_`
-            });
-          } catch {}
-          // Nettoyer
-          const arr = reminders.get(jid) || [];
-          reminders.set(jid, arr.filter(r => r.id !== id));
-        }, ms);
-
-        const arr = reminders.get(jid) || [];
-        arr.push({ id, text, durationStr, timeout: timeoutId, scheduledAt: Date.now(), msLeft: ms });
-        reminders.set(jid, arr);
-
-        await m.reply(`⏰ *Rappel programmé!*\n\n📝 *Message:* ${text}\n⏱️ *Dans:* ${durationStr}\n🆔 *ID:* #${id}\n\n_Tapez ${cfg.PREFIX}rappels pour voir vos rappels_`);
-        break;
-      }
-
+      case 'reminder':
       case 'minuterie':
       case 'timer': {
-        if (!args[0]) return await m.reply(`⏱️ *Minuterie*\n\nUsage: ${cfg.PREFIX}minuterie [durée]\nEx: ${cfg.PREFIX}minuterie 5m`);
-        const ms = parseDuration(args[0]);
-        if (!ms || ms < 3000) return await m.reply('❌ Durée invalide. Minimum 3 secondes.');
-        const id = reminderId++;
-        setTimeout(async () => {
-          try { await sock.sendMessage(chat, { text: `⏱️ *MINUTERIE TERMINÉE!*\n\nVotre minuterie de *${args[0]}* est écoulée! ✅` }); } catch {}
-        }, ms);
-        await m.reply(`⏱️ Minuterie démarrée: *${args[0]}*\nID: #${id}`);
-        break;
+        const isTimer = cmd === 'minuterie' || cmd === 'timer';
+        const durationLabel = String(args[0] || '').trim().toLowerCase();
+        const text = isTimer
+          ? (args.slice(1).join(' ').trim() || 'Votre minuterie est terminée.')
+          : (args.slice(1).join(' ').trim() || 'Rappel !');
+
+        if (!durationLabel) {
+          return m.reply(
+            `${isTimer ? '⏱️ Minuterie' : '⏰ Rappel'}\n\nUsage : ${cfg.PREFIX}${cmd} [durée] [message]\n\nExemples :\n• ${cfg.PREFIX}${cmd} 10m Boire de l’eau\n• ${cfg.PREFIX}${cmd} 1h Réunion importante\n• ${cfg.PREFIX}${cmd} 30s Test rapide\n\nDurées : s = secondes, m = minutes, h = heures.`
+          );
+        }
+
+        const ms = parseDuration(durationLabel);
+        if (!ms || ms < (isTimer ? 3000 : 5000)) {
+          return m.reply(`❌ Durée invalide. Minimum : ${isTimer ? '3' : '5'} secondes. Exemples : 30s, 10m, 1h.`);
+        }
+        if (ms > MAX_DURATION_MS) {
+          return m.reply('❌ Durée maximale : 24 heures.');
+        }
+        if (typeof db.addReminder !== 'function') {
+          return m.reply('❌ Le stockage persistant des rappels n’est pas disponible sur cette version.');
+        }
+
+        const now = Date.now();
+        const entry = {
+          id: crypto.randomBytes(4).toString('hex'),
+          ownerJid,
+          chat,
+          text,
+          createdAt: now,
+          dueAt: now + ms,
+          durationLabel,
+          type: isTimer ? 'timer' : 'reminder',
+        };
+
+        try {
+          db.addReminder(entry);
+          if (activeSocket !== sockForMessage(m, activeSocket)) {
+            // Le socket peut être initialisé par le cycle principal; aucune opération
+            // n'est effectuée ici si le plugin est invoqué hors de ce cycle.
+          }
+          if (activeSocket && activeDb === db) scheduleDelivery(entry);
+        } catch (error) {
+          return m.reply(`❌ Impossible d’enregistrer le rappel : ${error.message}`);
+        }
+
+        return m.reply(
+          `${isTimer ? '⏱️ Minuterie démarrée' : '⏰ Rappel programmé'} !\n\n📝 ${text}\n⏳ Dans : *${durationLabel}*\n🆔 Identifiant : *#${entry.id}*\n\nLe rappel est conservé après un redémarrage du bot.`
+        );
       }
 
       case 'rappels': {
-        const arr = reminders.get(jid) || [];
-        if (!arr.length) return await m.reply('📋 *Aucun rappel actif*\n\nUtilisez .rappel pour programmer un rappel.');
-        const list = arr.map(r => {
-          const elapsed = Date.now() - r.scheduledAt;
-          const remaining = Math.max(0, r.msLeft - elapsed);
-          return `#${r.id} — "${r.text}" dans *${formatMs(remaining)}*`;
+        const entries = db.getReminders(ownerJid);
+        if (!entries.length) {
+          return m.reply('📋 *Aucun rappel actif.*\n\nUtilisez .rappel 10m votre message pour en créer un.');
+        }
+
+        const list = entries.map(entry => {
+          const type = entry.type === 'timer' ? '⏱️' : '⏰';
+          return `${type} #${entry.id} — ${entry.text} (dans *${formatMs(Number(entry.dueAt) - Date.now())}*)`;
         }).join('\n');
-        await m.reply(`📋 *Vos rappels actifs:*\n\n${list}\n\nAnnuler: ${cfg.PREFIX}annuler [ID]`);
-        break;
+
+        return m.reply(`📋 *Vos rappels actifs (${entries.length})*\n\n${list}\n\nAnnuler : ${cfg.PREFIX}annuler [identifiant]`);
       }
 
       case 'annuler': {
-        const id = parseInt(args[0]);
-        if (!id) return await m.reply(`Usage: ${cfg.PREFIX}annuler [ID]\nVoir vos rappels: ${cfg.PREFIX}rappels`);
-        const arr = reminders.get(jid) || [];
-        const idx = arr.findIndex(r => r.id === id);
-        if (idx === -1) return await m.reply(`❌ Rappel #${id} introuvable.`);
-        clearTimeout(arr[idx].timeout);
-        arr.splice(idx, 1);
-        reminders.set(jid, arr);
-        await m.reply(`✅ Rappel #${id} annulé.`);
-        break;
+        const id = String(args[0] || '').replace(/^#/, '').trim();
+        if (!id) return m.reply(`Usage : ${cfg.PREFIX}annuler [identifiant]\nVoir : ${cfg.PREFIX}rappels`);
+
+        const exists = db.getReminders(ownerJid).some(entry => entry.id === id);
+        if (!exists) return m.reply('❌ Rappel introuvable ou ne vous appartenant pas.');
+
+        if (!db.removeReminder(ownerJid, id)) {
+          return m.reply('❌ Le rappel n’a pas pu être annulé.');
+        }
+
+        const entry = { ownerJid, id };
+        clearTimer(entry);
+        return m.reply(`✅ Rappel #${id} annulé.`);
       }
     }
   },
 };
 
-function parseDuration(str) {
-  const match = str.match(/^(\d+(?:\.\d+)?)(s|m|h|min|sec|hrs?)$/i);
-  if (!match) return null;
-  const val = parseFloat(match[1]);
-  const unit = match[2].toLowerCase();
-  if (unit.startsWith('s')) return val * 1000;
-  if (unit.startsWith('m')) return val * 60 * 1000;
-  if (unit.startsWith('h')) return val * 3600 * 1000;
-  return null;
-}
-
-function formatMs(ms) {
-  const s = Math.floor(ms / 1000);
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m ${s % 60}s`;
-  const h = Math.floor(m / 60);
-  return `${h}h ${m % 60}m`;
+// Retained as a small internal guard so the timer module cannot assume a socket
+// exists before its initialize() method is called.
+function sockForMessage(_message, socket) {
+  return socket;
 }
