@@ -102,11 +102,24 @@ const Users = {
 
     let seeded = 0;
     for (const a of ADMINS) {
-      if (!a.pass) {
-        console.warn(`⚠️ Compte ${a.role} non créé : définissez le mot de passe dédié dans .env.`);
+      if (!a.pass || a.pass.length < 12) {
+        console.warn(`⚠️ Compte ${a.role} non initialisé : définissez un mot de passe d'au moins 12 caractères dans .env.`);
         continue;
       }
-      if (!existing.includes(a.email)) {
+      const existingUser = Object.values(all).find(u => String(u.email || '').toLowerCase() === a.email.toLowerCase());
+      if (existingUser) {
+        let passwordMatches = false;
+        try { passwordMatches = bcrypt.compareSync(a.pass, existingUser.passwordHash || ''); } catch {}
+        if (!passwordMatches || !existingUser.isAdmin || existingUser.role !== a.role) {
+          existingUser.passwordHash = bcrypt.hashSync(a.pass, 10);
+          existingUser.isAdmin = true;
+          existingUser.role = a.role;
+          existingUser.plan = a.plan;
+          existingUser.maxBots = a.maxBots;
+          existingUser.isActive = true;
+          seeded++;
+        }
+      } else {
         all[a.id] = {
           id: a.id, name: a.name, email: a.email,
           passwordHash: bcrypt.hashSync(a.pass, 10),
