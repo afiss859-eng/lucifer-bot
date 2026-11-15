@@ -25,16 +25,10 @@ function getVipTier(coins) {
 
 // ─── Items boutique ───────────────────────────────────────────────────────────
 const SHOP_ITEMS = {
-  shield:    { name: '🛡️ Bouclier',      price: 500,   desc: 'Protège contre le vol pendant 24h' },
-  sword:     { name: '⚔️ Épée',          price: 750,   desc: '+20% de gains au travail pendant 24h' },
-  ring:      { name: '💍 Bague',         price: 1200,  desc: 'Bonus +10% sur tous les gains' },
-  crown:     { name: '👑 Couronne',      price: 5000,  desc: 'Statut royal — +50% daily' },
-  dragon:    { name: '🐉 Dragon',        price: 10000, desc: 'Attaque les autres joueurs' },
-  inviscloak:{ name: '🧥 Cape invisible',price: 2000,  desc: 'Impossible d\'être volé 48h' },
-  lucky:     { name: '🍀 Trèfle lucky',  price: 800,   desc: '+30% chance au casino' },
-  bomb:      { name: '💣 Bombe',         price: 1500,  desc: 'Vole 20% des coins d\'un joueur' },
-  time:      { name: '⏰ Cristal temps', price: 3000,  desc: 'Réinitialise le cooldown daily' },
-  potion:    { name: '🧪 Potion x2',     price: 2500,  desc: 'Double les gains pendant 2h' },
+  sword:  { name: '⚔️ Épée',           price: 750,  desc: '+20% sur les gains de .vwork tant que l’objet est dans l’inventaire' },
+  lucky:  { name: '🍀 Trèfle chanceux', price: 800,  desc: 'Améliore les gains de .vslots3 tant que l’objet est dans l’inventaire' },
+  crown:  { name: '👑 Couronne',        price: 5000, desc: '+50% sur .vdaily tant que l’objet est dans l’inventaire' },
+  potion: { name: '🧪 Potion x2',       price: 2500, desc: 'Double .vdaily tant que l’objet est dans l’inventaire' },
 };
 
 // ─── Missions quotidiennes ─────────────────────────────────────────────────────
@@ -217,6 +211,7 @@ ${isVip ? '\n👑 *Membre VIP — Accès complet*' : '\n💡 Devenez VIP pour ac
           return await m.reply(`❌ Item invalide.\n\nItems: ${Object.keys(SHOP_ITEMS).join(', ')}\n\nVoir la boutique: ${cfg.PREFIX}vshop`);
         }
         const item = SHOP_ITEMS[itemKey];
+        if ((eco.inventory || {})[itemKey]) return await m.reply('✅ Vous possédez déjà cet objet.');
         if (coins < item.price) return await m.reply(`❌ Pas assez de coins!\n\nPrix: ${item.price.toLocaleString()}\nVos coins: ${coins.toLocaleString()}`);
 
         db.addCoins(jid, -item.price);
@@ -239,12 +234,11 @@ ${isVip ? '\n👑 *Membre VIP — Accès complet*' : '\n💡 Devenez VIP pour ac
       case 'vuse': {
         const itemKey = args[0]?.toLowerCase();
         const inv = eco.inventory || {};
-        if (!itemKey || !inv[itemKey]) return await m.reply(`❌ Item non possédé. Voir: ${cfg.PREFIX}vinv`);
-        const item = SHOP_ITEMS[itemKey];
-        delete inv[itemKey];
-        db.setEco(jid, { inventory: inv });
-        await m.reply(`✅ *${item?.name}* utilisé!\n\n${item?.desc}`);
-        break;
+        if (!itemKey || !inv[itemKey]) return await m.reply(`❌ Objet non possédé. Voir: ${cfg.PREFIX}vinv`);
+        if (!SHOP_ITEMS[itemKey]) {
+          return await m.reply('⚠️ Cet ancien objet ne dispose pas encore d’un effet programmé. Il n’a pas été consommé.');
+        }
+        return await m.reply(`ℹ️ *${SHOP_ITEMS[itemKey].name}* est un bonus passif. Son effet s’applique automatiquement tant qu’il reste dans votre inventaire. Aucun objet n’a été consommé.`);
       }
 
       // ─── Missions ────────────────────────────────────────────────────────────
@@ -339,8 +333,9 @@ ${isVip ? '\n👑 *Membre VIP — Accès complet*' : '\n💡 Devenez VIP pour ac
       // ─── Gift ────────────────────────────────────────────────────────────────
       case 'vgift': {
         const mentioned = m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
-        const amount = parseInt(args[1]) || parseInt(args[0]) || 100;
+        const amount = args[1] === undefined ? 100 : Number(args[1]);
         if (!mentioned) return await m.reply(`🎁 Usage: ${cfg.PREFIX}vgift @utilisateur [montant]`);
+        if (!Number.isSafeInteger(amount) || amount < 10) return await m.reply('❌ Le montant doit être un entier d’au moins 10 coins.');
         if (amount > coins) return await m.reply(`❌ Vous n'avez que ${coins} coins.`);
         if (amount < 10) return await m.reply('❌ Minimum 10 coins.');
         db.addCoins(jid, -amount);
