@@ -110,12 +110,11 @@ module.exports = {
         const res = `[ ${s.join(' | ')} ]`;
         if (jackpot) {
           db.addCoins(m.sender, bet*10);
-          await m.reply(`🎰 *VIP SLOTS*\n\n${res}\n\n🎊 *JACKPOT! ×10!*\n💰 +${bet*10} coins\n💳 ${db.getCoins(m.sender)} coins`);
+          await m.reply(`🎰 *VIP SLOTS*\n\n${res}\n\n🎊 *JACKPOT! ×10!*\n💰 +${bet*9} coins\n💳 ${db.getCoins(m.sender)} coins`);
         } else if (win) {
           db.addCoins(m.sender, bet*3);
-          await m.reply(`🎰 *VIP SLOTS*\n\n${res}\n\n🎉 Gagné! ×3\n💰 +${bet*3} coins\n💳 ${db.getCoins(m.sender)} coins`);
+          await m.reply(`🎰 *VIP SLOTS*\n\n${res}\n\n🎉 Gagné! ×3\n💰 +${bet*2} coins\n💳 ${db.getCoins(m.sender)} coins`);
         } else {
-          db.removeCoins(m.sender, bet);
           await m.reply(`🎰 *VIP SLOTS*\n\n${res}\n\n😢 Perdu! -${bet}\n💳 ${db.getCoins(m.sender)} coins`);
         }
         break;
