@@ -765,7 +765,7 @@ async function doCoins() { const j=document.getElementById('cJid').value.trim(),
 
 // ── HTTP utils ────────────────────────────────────────────────────────────────
 async function jFetch(url,method='GET',body=null) {
-  const opts={method,headers:{'Content-Type':'application/json'}};
+  const opts={method,headers:{'Content-Type':'application/json','x-admin-token':token||''}};
   if(body) opts.body=JSON.stringify(body);
   const r=await fetch(url,opts);
   const ct=r.headers.get('content-type')||'';
