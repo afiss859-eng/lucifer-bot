@@ -218,15 +218,7 @@ async function startBot() {
 
   currentSock.ev.on('creds.update', saveCreds);
 
-  if (process.env.AUTO_VIEW_STATUS === 'true') {
-    currentSock.ev.on('messages.upsert', async ({ messages }) => {
-      for (const message of messages || []) {
-        if (message.key?.remoteJid === 'status@broadcast' && !message.key.fromMe) {
-          try { await currentSock.readMessages([message.key]); } catch {}
-        }
-      }
-    });
-  }
+  // Lecture automatique des statuts désactivée : éviter toute collecte ou interaction non sollicitée.
 }
 
 async function triggerPairCode(phone) {
