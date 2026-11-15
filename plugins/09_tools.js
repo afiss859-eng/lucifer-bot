@@ -8,7 +8,7 @@ module.exports = {
     'repeat','replace','emojify','ascii','morse','pig','leet',
     'palindrome','anagram','wordcount','charcount','random',
     'percent','roman','temperature','distance','weight','speed2',
-    'area','volume','currency2','timestamp','timer2','countdown2',
+    'area','currency2','timestamp','timer2','countdown2',
   ],
   description: 'Outils utilitaires',
   execute: async ({ m, args, q, config: cfg }) => {
