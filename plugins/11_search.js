@@ -2,10 +2,10 @@ const { fetchJson } = require('../src/utils');
 
 module.exports = {
   commands: [
-    'wiki','define','country','capital','flag','population',
+    'country','capital','flag','population',
     'crypto','covid','color','ip2','cat','dog','fox','duck',
-    'joke2','advice','quote','trivia2','number2','year',
-    'bible','quran','dictionary','synonym','antonym',
+    'joke2','advice','trivia2','number2','year',
+    'bible','dictionary','synonym','antonym',
   ],
   description: 'Commandes de recherche',
   execute: async ({ m, args, q, config: cfg }) => {
