@@ -89,7 +89,7 @@ async function loadPluginsAndHandlers(sock) {
         const prefix = String(config.PREFIX || '.');
         if (!body.startsWith(prefix)) continue;
 
-        const tokens = body.slice(prefix.length).trim().split(/\\s+/);
+        const tokens = body.slice(prefix.length).trim().split(/\s+/);
         const cmd = tokens.shift()?.toLowerCase();
         if (!cmd) continue;
         const plugin = plugins.get(cmd);
