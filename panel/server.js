@@ -11,7 +11,7 @@ const app  = express();
 const PORT = parseInt(process.env.PANEL_PORT) || 4000;
 
 // Token interne pour parler au bot
-const INTERNAL_TOKEN  = process.env.INTERNAL_TOKEN  || 'lucifer-internal-2024';
+const INTERNAL_TOKEN  = process.env.INTERNAL_TOKEN || '';
 const INTERNAL_PORT   = parseInt(process.env.INTERNAL_API_PORT) || 3500;
 
 app.use(cors());
@@ -107,6 +107,7 @@ app.get('/api/bot-status', require('./middleware/auth').authMiddleware, async (r
 
 // ── /api/admin/broadcast-wa — Broadcast WhatsApp via le bot ───────────────────
 app.post('/api/admin/broadcast-wa', require('./middleware/auth').adminMiddleware, async (req, res) => {
+  return res.status(403).json({ error: 'Les envois groupés WhatsApp sont désactivés pour protéger les comptes.' });
   const { jids, message } = req.body;
   if (!jids?.length || !message) return res.status(400).json({ error: 'jids[] et message requis.' });
   const results = [];
@@ -160,19 +161,7 @@ app.use((_, res) => res.status(404).sendFile(path.join(__dirname, 'public', 'ind
 // ── Start ─────────────────────────────────────────────────────────────────────
 Users.ensureAdmin();
 app.listen(PORT, () => {
-  console.log(`\n╔═══════════════════════════════════════════════════╗`);
-  console.log(`║  𓅂 DOMA LUCIFERO — Panel SaaS v2.1                ║`);
-  console.log(`║  URL:    http://localhost:${PORT}                    ║`);
-  console.log(`╠═══════════════════════════════════════════════════╣`);
-  console.log(`║  👑 Super Admin: admin@lucifero.bot                ║`);
-  console.log(`║  🔑 Mot de passe: LuciferAdmin@2024                ║`);
-  console.log(`╠═══════════════════════════════════════════════════╣`);
-  console.log(`║  🛡️  Modérateur:  mod@lucifero.bot                  ║`);
-  console.log(`║  🔑 Mot de passe: LuciferMod@2024                  ║`);
-  console.log(`╠═══════════════════════════════════════════════════╣`);
-  console.log(`║  🎫 Support:     support@lucifero.bot              ║`);
-  console.log(`║  🔑 Mot de passe: LuciferSupport@2024              ║`);
-  console.log(`╚═══════════════════════════════════════════════════╝\n`);
+  console.log(`\nLucifer Panel démarré sur le port ${PORT}.`);
 });
 
 module.exports = app;
