@@ -118,7 +118,10 @@ const Users = {
         console.log(`✅ Compte ${a.role} créé: ${a.email} (mot de passe défini dans .env).`);
       }
     }
-    if (seeded > 0) console.log(`✅ ${seeded} compte(s) administrateur(s) initialisé(s).`);
+    if (seeded > 0) {
+      write('users', all);
+      console.log(`✅ ${seeded} compte(s) administrateur(s) initialisé(s).`);
+    }
   },
 };
 
