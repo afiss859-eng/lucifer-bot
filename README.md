@@ -35,6 +35,12 @@
 
   ---
 
+  ## ⚠️ Important — compatibilité WhatsApp
+
+  Ce projet utilise Baileys, une bibliothèque tierce non officielle. WhatsApp peut restreindre ou suspendre un compte utilisant un client non officiel ou des automatisations, même si le code fonctionne correctement. Aucun réglage ne peut garantir l'absence de bannissement. N'utilisez pas votre numéro personnel principal pour les essais. Les envois groupés et la lecture automatique des statuts sont désactivés par défaut. Pour un usage professionnel, privilégiez la WhatsApp Business Platform officielle et respectez les règles de consentement des destinataires.
+
+  ---
+
   ## 🎉 Système Bienvenue/Au Revoir — 20+20 styles
 
   Styles disponibles: Classique, Démon 😈, Hacker 💻, Dragon 🐉, Prison 🔒, Mafia 🎩, Médical 🏥, Détective 🕵️, Zombie 🧟, Ninja 🥷, Viking 🪓, Pirate 🏴‍☠️, Boxeur 🥊, Scientifique 🔬, Western 🤠, Robot 🤖, Pharaon 𓂀, Rap 🎤, Champion 🏆, Ange 👼
