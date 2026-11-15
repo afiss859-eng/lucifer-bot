@@ -63,6 +63,12 @@ async function loadPluginsAndHandlers(sock) {
 
   const plugins = await loadPlugins();
   logger.info(`📦 ${plugins.size} commandes chargées`);
+
+  // Les rappels persistants sont restaurés à chaque connexion WhatsApp,
+  // y compris après une perte réseau ou un redémarrage du processus.
+  const reminderPlugin = require('../plugins/33_reminder');
+  reminderPlugin.initialize(sock, db, logger);
+
   const cooldowns = new Map();
 
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
