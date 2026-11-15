@@ -16,12 +16,25 @@ function smsg(sock, m) {
     if (m.sender?.includes(':')) m.sender = m.sender.split(':')[0] + '@s.whatsapp.net';
   }
   if (m.message) {
-    m.mtype = getContentType(m.message);
-    m.msg = m.mtype === 'viewOnceMessage'
-      ? m.message[m.mtype]?.message?.[getContentType(m.message[m.mtype]?.message || {})]
-      : m.message[m.mtype];
+    let content = m.message;
+    while (content?.ephemeralMessage?.message) content = content.ephemeralMessage.message;
 
-    m.body = m.message.conversation || m.msg?.caption || m.msg?.text ||
+    m.isViewOnce = !!(
+      content?.viewOnceMessage ||
+      content?.viewOnceMessageV2 ||
+      content?.viewOnceMessageV2Extension
+    );
+    if (m.isViewOnce) {
+      content =
+        content.viewOnceMessage?.message ||
+        content.viewOnceMessageV2?.message ||
+        content.viewOnceMessageV2Extension?.message ||
+        content;
+    }
+
+    m.mtype = getContentType(content);
+    m.msg = content[m.mtype];
+    m.body = content.conversation || m.msg?.caption || m.msg?.text ||
       (m.mtype === 'listResponseMessage' && m.msg?.singleSelectReply?.selectedRowId) ||
       (m.mtype === 'buttonsResponseMessage' && m.msg?.selectedButtonId) || '';
 
