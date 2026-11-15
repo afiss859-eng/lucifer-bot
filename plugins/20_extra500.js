@@ -26,7 +26,7 @@ const simpleCommands = [
   'marathon','triathlon','skateboard','surfing','snowboard','skiing','climbing','archery','fencing','equestrian',
   // Musique
   'rap','hiphop','rnb','pop','rock','jazz','blues','classical','electronic','reggae',
-  'country','folk','metal','punk','indie','soul','funk','disco','house','techno',
+  'folk','metal','punk','indie','soul','funk','disco','house','techno',
   // Films
   'action','comedy','horror','thriller','romance','scifi','documentary','animation','western','drama',
   // Nourriture monde
@@ -49,7 +49,7 @@ const simpleCommands = [
   'morning','evening','night2','weekend','holiday','birthday2','anniversary','wedding','funeral','party',
   'school','college','university','work2','office','home2','garden2','kitchen','bedroom','bathroom',
   'car2','bike','bus','train2','plane2','boat2','rocket2','submarine','helicopter','motorbike',
-  'coffee','tea','water','juice','milk','beer','wine','cocktail2','smoothie','soda',
+  'coffee','tea','water','juice','milk','beer','wine','smoothie','soda',
   'sun2','moon2','star2','cloud2','rain2','snow2','wind2','thunder','rainbow2','fog',
   'fire2','water2','earth2','air2','ice','lightning','tornado','earthquake','tsunami','hurricane',
   // Anagram
@@ -76,7 +76,7 @@ module.exports = {
 
     // Catégories de commandes génériques
     const sportList = ['cricket','rugby','volleyball','baseball','hockey','golf','boxing','mma','wrestling','cycling','marathon','triathlon','skateboard','surfing','snowboard','skiing','climbing','archery','fencing','equestrian'];
-    const musicList = ['rap','hiphop','rnb','pop','rock','jazz','blues','classical','electronic','reggae','country','folk','metal','punk','indie','soul','funk','disco','house','techno'];
+    const musicList = ['rap','hiphop','rnb','pop','rock','jazz','blues','classical','electronic','reggae','folk','metal','punk','indie','soul','funk','disco','house','techno'];
     const movieList = ['action','comedy','horror','thriller','romance','scifi','documentary','animation','western','drama'];
     const foodList = ['pizza','sushi','burger','taco','curry','ramen','pasta','paella','tagine','pho','croissant','baguette','pretzel','kebab','falafel','hummus','tiramisu','crepe','waffle','donut'];
     const techList = ['chatgpt','bard','gemini','android2','ios','windows','linux','mac','browser','vpn','blockchain','nft','metaverse','cloud','database2','api','server2','frontend','backend','fullstack'];
