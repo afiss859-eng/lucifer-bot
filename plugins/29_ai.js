@@ -100,7 +100,7 @@ async function callAI(jid, userMsg, preferGemini = false) {
 // ─── Plugin ──────────────────────────────────────────────────────────────────
 module.exports = {
   commands: [
-    'chat', 'gpt', 'gemini2', 'ia',
+    'chat', 'gpt', 'gemini2', 'ia', 'aistory',
     'aitranslate', 'aipoem', 'aisummary', 'aicorrect',
     'aihelp', 'aistory', 'aireset', 'aistats2',
   ],
