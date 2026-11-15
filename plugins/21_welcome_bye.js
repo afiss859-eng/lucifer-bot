@@ -70,7 +70,10 @@ module.exports = {
       case 'testwelcome': {
         if (!m.isGroup) return await m.reply('❌ Groupe uniquement!');
         const meta = await sock.groupMetadata(m.chat);
-        const idx = Math.floor(Math.random() * welcomeMessages.length);
+        const savedStyle = Number.parseInt(db.getNote(m.chat, '__welcome_style__'), 10);
+        const idx = Number.isInteger(savedStyle) && savedStyle >= 0 && savedStyle < welcomeMessages.length
+          ? savedStyle
+          : Math.floor(Math.random() * welcomeMessages.length);
         const text = formatMsg(
           welcomeMessages[idx],
           '@' + m.sender.split('@')[0],
@@ -94,6 +97,8 @@ module.exports = {
         break;
       }
       case 'welcomestyle': {
+        if (!m.isGroup) return await m.reply('❌ Groupe uniquement.');
+        if (!isOwner) return await m.reply('🔱 Propriétaire uniquement!');
         const n = parseInt(args[0]);
         if (!n || n < 1 || n > welcomeMessages.length) {
           return await m.reply(`Usage: ${cfg.PREFIX}welcomestyle [1-${welcomeMessages.length}]\nIl y a *${welcomeMessages.length}* styles disponibles!`);
@@ -111,6 +116,7 @@ module.exports = {
         break;
       }
       case 'setwelcome':
+        if (!m.isGroup) return await m.reply('❌ Groupe uniquement.');
         if (!isOwner) return await m.reply('🔱 Propriétaire uniquement!');
         db.saveNote(m.chat, '__welcome_on__', '1');
         await m.reply(`✅ Messages de bienvenue *activés*!\n${welcomeMessages.length} styles disponibles.\nTestez: ${cfg.PREFIX}testwelcome\nChoisir style: ${cfg.PREFIX}welcomestyle [1-${welcomeMessages.length}]`);
@@ -121,6 +127,7 @@ module.exports = {
         await m.reply('✅ Messages de bienvenue *désactivés*.');
         break;
       case 'setbye':
+        if (!m.isGroup) return await m.reply('❌ Groupe uniquement.');
         if (!isOwner) return await m.reply('🔱 Propriétaire uniquement!');
         db.saveNote(m.chat, '__bye_on__', '1');
         await m.reply(`✅ Messages d'au revoir *activés*!\n${goodbyeMessages.length} styles disponibles.\nTestez: ${cfg.PREFIX}testbye`);
