@@ -1,9 +1,29 @@
+const quizSessions = new Map();
+
+function normalizeAnswer(value) {
+  return String(value || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').trim().toLowerCase();
+}
+
 module.exports = {
-  commands: ['addvip','delvip','listvip','viplevel','vipbadge','vipdaily','vipgamble','vipslots','vipquiz'],
+  commands: ['addvip','delvip','listvip','viplevel','vipbadge','vipdaily','vipgamble','vipslots','vipquiz','reponse'],
   description: 'Système VIP',
   ownerOnly: false,
   execute: async ({ sock, m, args, isOwner, isVip, config: cfg, db }) => {
     const cmd = m.body.slice(cfg.PREFIX.length).trim().split(' ')[0].toLowerCase();
+
+    if (cmd === 'reponse') {
+      const session = quizSessions.get(m.sender);
+      if (!session || Date.now() > session.expiresAt) {
+        quizSessions.delete(m.sender);
+        return await m.reply('⏳ Aucun quiz VIP en attente. Lancez .vipquiz pour commencer.');
+      }
+      quizSessions.delete(m.sender);
+      if (normalizeAnswer(q) !== normalizeAnswer(session.answer)) {
+        return await m.reply('❌ Mauvaise réponse. Le quiz est terminé; relancez .vipquiz pour une nouvelle question.');
+      }
+      db.addCoins(m.sender, 200);
+      return await m.reply(`✅ Bonne réponse ! Vous gagnez 200 coins.\n💳 Solde : ${db.getCoins(m.sender)} coins`);
+    }
 
     switch (cmd) {
       case 'addvip': {
@@ -60,8 +80,8 @@ module.exports = {
       }
       case 'vipgamble': {
         if (!isVip) return await m.reply(`👑 Commande VIP!\nContactez: wa.me/${cfg.OWNER_NUMBER}`);
-        const bet = parseInt(args[0]);
-        if (!bet || bet < 1) return await m.reply(`Usage: ${cfg.PREFIX}vipgamble [montant]`);
+        const bet = Number(args[0]);
+        if (!Number.isSafeInteger(bet) || bet < 1) return await m.reply(`Usage: ${cfg.PREFIX}vipgamble [montant entier positif]`);
         const coins = db.getCoins(m.sender);
         if (coins < bet) return await m.reply(`❌ Solde insuffisant! Vous avez ${coins} coins.`);
         const win = Math.random() > 0.4;
@@ -77,9 +97,11 @@ module.exports = {
       }
       case 'vipslots': {
         if (!isVip) return await m.reply(`👑 Commande VIP!\nContactez: wa.me/${cfg.OWNER_NUMBER}`);
-        const bet = parseInt(args[0]) || 100;
+        const bet = args[0] === undefined ? 100 : Number(args[0]);
+        if (!Number.isSafeInteger(bet) || bet < 1) return await m.reply(`Usage: ${cfg.PREFIX}vipslots [montant entier positif]`);
         const coins = db.getCoins(m.sender);
         if (coins < bet) return await m.reply(`❌ Solde insuffisant!`);
+        db.removeCoins(m.sender, bet);
         const emojis = ['🍒','🍋','🍊','🍇','⭐','💎','7️⃣'];
         const r = () => emojis[Math.floor(Math.random()*emojis.length)];
         const s = [r(),r(),r()];
@@ -108,7 +130,8 @@ module.exports = {
           {q:'Quel est le symbole chimique de l\'or?',a:'au',r:'Au'},
         ];
         const quiz = qs[Math.floor(Math.random()*qs.length)];
-        await m.reply(`👑 *VIP Quiz*\n\n❓ ${quiz.q}\n\nRépondez avec: ${cfg.PREFIX}reponse [votre réponse]\n\n💰 Récompense: 200 coins`);
+        quizSessions.set(m.sender, { answer: quiz.a, expiresAt: Date.now() + 2 * 60 * 1000 });
+        await m.reply(`👑 *VIP Quiz*\n\n❓ ${quiz.q}\n\nRépondez avec: ${cfg.PREFIX}reponse [votre réponse] dans les 2 minutes.\n\n💰 Récompense: 200 coins`);
         break;
       }
     }
