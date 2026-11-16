@@ -24,7 +24,11 @@ const sessions = new Set();
 const loginAttempts = new Map();
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 5;
-const TOK_FILE = path.join(__dirname, '..', 'database', 'admin_tokens.json');
+const DATA_DIR = process.env.BOT_DATA_DIR
+  ? path.resolve(process.env.BOT_DATA_DIR)
+  : path.join(__dirname, '..', 'database');
+fs.ensureDirSync(DATA_DIR);
+const TOK_FILE = path.join(DATA_DIR, 'admin_tokens.json');
 
 function loadTokens() {
   try {
