@@ -227,7 +227,7 @@ textarea{height:100px;resize:vertical}
         <!-- Zone manuelle (si PAS de PHONE_NUMBER) -->
         <div id="manualZone">
           <div class="info-notice">
-            💡 <b>Méthode recommandée</b> : Ajoutez <code>PHONE_NUMBER</code> dans vos variables Render.
+            💡 <b>Méthode recommandée</b> : Ajoutez <code>PHONE_NUMBER</code> dans les variables du serveur qui exécute le bot.
             Le code se génère automatiquement à chaque démarrage.
           </div>
           <div class="steps">
@@ -468,7 +468,7 @@ async function doLogin() {
       shake(document.querySelector('.lcard'));
     }
   } catch {
-    err.textContent = '🌐 Serveur injoignable. Vérifiez que Render a bien déployé.';
+    err.textContent = '🌐 Serveur bot indisponible. Vérifiez BOT_API_URL sur Vercel et le serveur qui exécute le bot.';
     err.classList.add('show');
   }
   btn.disabled = false; btn.textContent = '🔐 Se connecter';
@@ -505,6 +505,18 @@ async function refreshStatus() {
     const box=document.getElementById('sBox'), txt=document.getElementById('sTxt'), sub=document.getElementById('sSub');
     const ts=document.getElementById('tTxt');
 
+    // The Vercel site is only the dashboard; a persistent WhatsApp engine
+    // must be configured separately through BOT_API_URL.
+    if (d && d.error) {
+      setDot([dot,tDot],'off'); box.className='sbox off';
+      txt.textContent='⚠️ Moteur WhatsApp non relié';
+      sub.textContent=d.error;
+      ts.textContent='À configurer'; ts.style.color='var(--gold)';
+      document.getElementById('autoCodeZone').style.display='none';
+      document.getElementById('manualZone').style.display='block';
+      return;
+    }
+
     if (d.connected) {
       setDot([dot,tDot],'on'); box.className='sbox on';
       txt.textContent='✅ Bot connecté et opérationnel';
@@ -515,7 +527,7 @@ async function refreshStatus() {
       setDot([dot,tDot],'wait'); box.className='sbox wait';
       txt.textContent='⏳ Bot prêt — En attente de liaison';
       sub.textContent = d.phoneSet
-        ? 'Code en cours de génération... (vérifiez les logs Render)'
+        ? 'Code en cours de génération... (vérifiez les logs du serveur bot)'
         : 'Entrez votre numéro ci-dessous pour générer le code';
       ts.textContent='En attente'; ts.style.color='var(--gold)';
     } else {
@@ -574,7 +586,7 @@ function startTimer(id) {
     if (s <= 0) {
       clearInterval(cTimer); cTimer = null;
       currentCode = null;
-      if (id === 'cTick') { const e=document.getElementById('autoCodeBox'); if(e) e.textContent='⏰ Expiré — Redéployez sur Render'; }
+      if (id === 'cTick') { const e=document.getElementById('autoCodeBox'); if(e) e.textContent='⏰ Expiré — Redémarrez le serveur bot'; }
       else { document.getElementById('manCodeBox').style.display='none'; setMsg('pMsg','⏰ Code expiré. Cliquez à nouveau ⚡ Générer.','warn'); }
     }
   }, 1000);
