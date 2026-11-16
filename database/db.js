@@ -1,7 +1,8 @@
 const fs = require('fs-extra');
 const path = require('path');
 
-const DB_DIR = __dirname;
+const DB_DIR = process.env.BOT_DATA_DIR ? path.resolve(process.env.BOT_DATA_DIR) : __dirname;
+fs.ensureDirSync(DB_DIR);
 const cache = new Map();
 
 function loadDB(name) {
