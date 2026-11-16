@@ -7,3 +7,7 @@ database/vip.json
 database/banned.json
 database/warn.json
 database/economy.json
+database/users.json
+database/notes.json
+database/admin_tokens.json
+database/*.tmp
