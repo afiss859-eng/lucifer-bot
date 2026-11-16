@@ -29,7 +29,9 @@ const logger = pino({
 });
 const silent = pino({ level: 'silent' });
 const store = makeInMemoryStore ? makeInMemoryStore({ logger: silent }) : null;
-const SESSION_DIR = path.join(__dirname, '..', config.SESSION_NAME || 'lucifer-session');
+const SESSION_DIR = process.env.WHATSAPP_SESSION_PATH
+  ? path.resolve(process.env.WHATSAPP_SESSION_PATH)
+  : path.join(__dirname, '..', config.SESSION_NAME || 'lucifer-session');
 const OWNER = config.OWNER_NUMBER || '';
 let globalSock = null;
 let botConnected = false;
@@ -274,7 +276,7 @@ async function triggerPairCode(phone) {
 
 function getCode() { return sharedCode; }
 
-const WEB_PORT = Number.parseInt(process.env.WEB_PORT, 10) || 3000;
+const WEB_PORT = Number.parseInt(process.env.PORT || process.env.WEB_PORT, 10) || 3000;
 web.startWebServer(WEB_PORT);
 web.setPairCodeFn(triggerPairCode);
 web.setGetLastCodeFn(getCode);
