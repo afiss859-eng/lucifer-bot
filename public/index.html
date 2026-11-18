@@ -149,7 +149,7 @@ textarea{height:100px;resize:vertical}
     <div class="lerr" id="lErr"></div>
     <div class="lok"  id="lOk"></div>
     <div class="lhint">
-      Mot de passe = variable <code>ADMIN_PASSWORD</code> configurée dans le fichier <code>.env</code>.
+      Mot de passe = <code>ADMIN_PASSWORD</code> dans le fichier <code>.env</code> du serveur qui exécute le bot (pas sur Vercel). Le tableau de bord Vercel doit aussi recevoir <code>BOT_API_URL</code>.
     </div>
   </div>
 </div>
@@ -448,7 +448,7 @@ function boot() {
 // ── Login ─────────────────────────────────────────────────────────────────────
 async function doLogin() {
   const btn = document.getElementById('lBtn');
-  const pw  = document.getElementById('pwIn').value.trim();
+  const pw  = document.getElementById('pwIn').value;
   const err = document.getElementById('lErr');
   const ok  = document.getElementById('lOk');
   err.classList.remove('show'); ok.classList.remove('show');
