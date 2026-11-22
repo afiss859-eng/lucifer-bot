@@ -1,24 +1,11 @@
 'use strict';
 
+// Interface temporaire « connexion WhatsApp uniquement ».
+// Toutes les routes d'administration sont volontairement inaccessibles via Vercel.
 const ROUTES = new Map([
-  ['login', ['POST']],
-  ['logout', ['POST']],
   ['status', ['GET']],
   ['paircode/poll', ['GET']],
   ['paircode', ['POST']],
-  ['clearsession', ['POST']],
-  ['stats', ['GET']],
-  ['users', ['GET']],
-  ['vip', ['GET']],
-  ['vip/add', ['POST']],
-  ['vip/remove', ['POST']],
-  ['banned', ['GET']],
-  ['banned/add', ['POST']],
-  ['banned/remove', ['POST']],
-  ['broadcast', ['POST']],
-  ['send', ['POST']],
-  ['coins', ['POST']],
-  ['restart', ['POST']],
 ]);
 
 function reply(res, status, message) {
