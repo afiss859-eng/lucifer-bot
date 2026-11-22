@@ -20,72 +20,26 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// L'interface d'administration est temporairement désactivée.
+// Les routes sensibles restent fermées tant qu'aucun système d'administration n'est réactivé.
 const sessions = new Set();
-const loginAttempts = new Map();
-const LOGIN_WINDOW_MS = 15 * 60 * 1000;
-const LOGIN_MAX_ATTEMPTS = 5;
-const DATA_DIR = process.env.BOT_DATA_DIR
-  ? path.resolve(process.env.BOT_DATA_DIR)
-  : path.join(__dirname, '..', 'database');
-fs.ensureDirSync(DATA_DIR);
-const TOK_FILE = path.join(DATA_DIR, 'admin_tokens.json');
+const pairAttempts = new Map();
+const PAIR_WINDOW_MS = 15 * 60 * 1000;
+const PAIR_MAX_ATTEMPTS = 5;
 
-function loadTokens() {
-  try {
-    const r = fs.readJsonSync(TOK_FILE);
-    if (Array.isArray(r)) r.filter(t => typeof t === 'string' && t.length >= 32).forEach(t => sessions.add(t));
-  } catch {}
+function requestIp(req) {
+  const forwarded = req.headers['x-forwarded-for'];
+  const first = typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : '';
+  return first || req.ip || req.socket?.remoteAddress || 'unknown';
 }
-function saveTokens() {
-  try { fs.outputJsonSync(TOK_FILE, [...sessions], { spaces: 2 }); } catch {}
-}
-loadTokens();
 
 function authMW(req, res, next) {
   const t = req.headers['x-admin-token'];
-  if (!t || typeof t !== 'string' || !sessions.has(t)) return res.status(401).json({ error: 'Non autorisé.' });
+  if (!t || typeof t !== 'string' || !sessions.has(t)) return res.status(401).json({ error: 'Fonction administrateur désactivée.' });
   next();
 }
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-
-app.post('/api/login', (req, res) => {
-  const ip = req.ip || req.socket?.remoteAddress || 'unknown';
-  const now = Date.now();
-  const previous = loginAttempts.get(ip);
-  const attempts = previous && now - previous.startedAt < LOGIN_WINDOW_MS
-    ? previous
-    : { count: 0, startedAt: now };
-
-  if (attempts.count >= LOGIN_MAX_ATTEMPTS) {
-    const retrySeconds = Math.max(1, Math.ceil((LOGIN_WINDOW_MS - (now - attempts.startedAt)) / 1000));
-    res.set('Retry-After', String(retrySeconds));
-    return res.status(429).json({ error: 'Trop de tentatives. Réessayez plus tard.' });
-  }
-
-  const pass = String(req.body.password || '');
-  const expect = process.env.ADMIN_PASSWORD || config.ADMIN_PASSWORD;
-  if (!expect) return res.status(503).json({ error: 'ADMIN_PASSWORD non configuré côté serveur.' });
-  const a = Buffer.from(pass);
-  const b = Buffer.from(String(expect));
-  if (!pass || a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
-    attempts.count += 1;
-    loginAttempts.set(ip, attempts);
-    return res.status(403).json({ error: 'Mot de passe incorrect.' });
-  }
-
-  loginAttempts.delete(ip);
-  const token = crypto.randomBytes(32).toString('hex');
-  sessions.add(token);
-  saveTokens();
-  res.json({ token });
-});
-
-app.post('/api/logout', authMW, (req, res) => {
-  sessions.delete(req.headers['x-admin-token']);
-  saveTokens();
-  res.json({ ok: true });
-});
 
 app.get('/api/status', (req, res) => {
   const authenticated = typeof req.headers['x-admin-token'] === 'string' &&
@@ -103,24 +57,46 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-app.get('/api/paircode/poll', authMW, (req, res) => {
-  const src = _pendingCode || (_getCodeFn ? _getCodeFn() : null);
-  if (src?.code && src.time && Date.now() - src.time < 180000)
+app.get('/api/paircode/poll', (req, res) => {
+  const ip = requestIp(req);
+  const src = _pendingCode;
+  if (src?.ip === ip && src.code && src.time && Date.now() - src.time < 180000)
     return res.json({ fresh: true, code: src.code, formatted: src.formatted, phone: src.phone });
   res.json({ fresh: false });
 });
 
-app.post('/api/paircode', authMW, async (req, res) => {
+app.post('/api/paircode', async (req, res) => {
   const phone = String(req.body.phone || '').replace(/\D/g, '');
-  if (!phone || phone.length < 7) return res.status(400).json({ error: 'Numéro invalide.' });
-  if (_connected) return res.status(400).json({ error: 'Bot déjà connecté!' });
-  if (!_pairFn) return res.status(503).json({ error: 'Bot pas encore prêt. Réessayez dans quelques secondes.' });
+  const owner = String(config.OWNER_NUMBER || '').replace(/\D/g, '');
+  const ip = requestIp(req);
+  if (!owner) return res.status(503).json({ error: 'OWNER_NUMBER doit être configuré sur le serveur du bot.' });
+  if (!phone || phone.length < 7) return res.status(400).json({ error: 'Numéro invalide. Ajoutez indicatif pays et numéro.' });
+  if (phone !== owner) return res.status(403).json({ error: 'Ce numéro ne correspond pas au numéro propriétaire configuré pour ce bot.' });
+
+  const now = Date.now();
+  const previous = pairAttempts.get(ip);
+  const attempt = previous && now - previous.startedAt < PAIR_WINDOW_MS
+    ? previous
+    : { count: 0, startedAt: now };
+  if (attempt.count >= PAIR_MAX_ATTEMPTS) {
+    const retrySeconds = Math.max(1, Math.ceil((PAIR_WINDOW_MS - (now - attempt.startedAt)) / 1000));
+    res.set('Retry-After', String(retrySeconds));
+    return res.status(429).json({ error: 'Trop de demandes. Réessayez plus tard.' });
+  }
+  if (_connected) return res.status(400).json({ error: 'Bot déjà connecté !' });
+  if (!_pairFn) return res.status(503).json({ error: 'Moteur WhatsApp pas encore prêt. Réessayez dans quelques secondes.' });
+
+  attempt.count += 1;
+  pairAttempts.set(ip, attempt);
   try {
     const code = await _pairFn(phone);
     const formatted = code.match(/.{1,4}/g)?.join('-') || code;
-    _pendingCode = { code, formatted, phone, time: Date.now() };
+    _pendingCode = { code, formatted, phone, time: Date.now(), ip };
+    res.set('Cache-Control', 'no-store');
     res.json({ code, formatted });
-  } catch (e) { res.status(500).json({ error: e.message || 'Erreur inconnue' }); }
+  } catch (e) {
+    res.status(500).json({ error: e.message || 'Erreur inconnue' });
+  }
 });
 
 app.post('/api/clearsession', authMW, async (req, res) => {
