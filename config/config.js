@@ -1,14 +1,12 @@
 require('dotenv').config();
 
 const ownerNumber = (process.env.OWNER_NUMBER || '').replace(/\D/g, '');
-const adminPassword = process.env.ADMIN_PASSWORD || process.env.PANEL_PASSWORD || '';
 
 module.exports = {
   BOT_NAME: process.env.BOT_NAME || '𓅂𝐃𝚯𝐌𝚫 𝐋𝐔𝐂𝐈𝐅𝚵𝐑𝚯𓅂',
   OWNER_NUMBER: ownerNumber,
   PREFIX: process.env.PREFIX || '.',
   SESSION_NAME: process.env.SESSION_NAME || 'lucifer-session',
-  ADMIN_PASSWORD: adminPassword,
   VERSION: '2.1.0',
   AUTHOR: 'afiss859-eng',
   TIMEZONE: process.env.TIMEZONE || 'Africa/Ouagadougou',
