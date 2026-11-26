@@ -31,11 +31,10 @@ function getRoute(req) {
     try {
       const pathname = new URL(candidate, 'https://lucifer.invalid').pathname;
       const apiIndex = pathname.lastIndexOf('/api/');
-      let route = apiIndex >= 0
-        ? pathname.slice(apiIndex + '/api/'.length)
-        : pathname.replace(/^\\/+/, '');
-
-      route = route
+      const pathValue = apiIndex >= 0
+        ? pathname.slice(apiIndex + 5)
+        : pathname;
+      const route = pathValue
         .split('/')
         .filter(Boolean)
         .map(decodeSegment)
@@ -80,8 +79,8 @@ module.exports = async function handler(req, res) {
       return reply(res, 500, 'BOT_API_URL doit être une URL HTTPS valide, sans identifiants ni paramètres.');
     }
 
-    const prefix = base.pathname.replace(/\\/+$/, '');
-    base.pathname = `${prefix}/api/${route}`;
+    const prefix = base.pathname.split('/').filter(Boolean).join('/');
+    base.pathname = (prefix ? '/' + prefix : '') + '/api/' + route;
     base.search = '';
 
     for (const [key, value] of Object.entries(req.query || {})) {
