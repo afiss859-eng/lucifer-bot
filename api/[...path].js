@@ -1,7 +1,8 @@
 'use strict';
 
-// Interface temporaire « connexion WhatsApp uniquement ».
-// Toutes les routes d'administration sont volontairement inaccessibles via Vercel.
+// Vercel Node Functions expose the incoming URL in req.url. The catch-all
+// route parameter is not guaranteed to be present in req.query, which only
+// contains query-string values in the Node runtime.
 const ROUTES = new Map([
   ['status', ['GET']],
   ['paircode/poll', ['GET']],
@@ -15,16 +16,51 @@ function reply(res, status, message) {
   return res.end(JSON.stringify({ error: message }));
 }
 
-module.exports = async function handler(req, res) {
-  const method = String(req.method || 'GET').toUpperCase();
+function decodeSegment(segment) {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
+
+function getRoute(req) {
+  const candidates = [req.url, req.originalUrl];
+  for (const candidate of candidates) {
+    if (typeof candidate !== 'string' || !candidate) continue;
+    try {
+      const pathname = new URL(candidate, 'https://lucifer.invalid').pathname;
+      const apiIndex = pathname.lastIndexOf('/api/');
+      let route = apiIndex >= 0
+        ? pathname.slice(apiIndex + '/api/'.length)
+        : pathname.replace(/^\\/+/, '');
+
+      route = route
+        .split('/')
+        .filter(Boolean)
+        .map(decodeSegment)
+        .join('/');
+
+      // Ignore framework placeholders and try the next source instead.
+      if (route && !route.includes('[...')) return route;
+    } catch {
+      // Try originalUrl or the legacy route parameter below.
+    }
+  }
+
+  // Compatibility fallback for adapters that inject catch-all params.
   const rawPath = req.query && req.query.path;
   const parts = Array.isArray(rawPath)
     ? rawPath
     : typeof rawPath === 'string'
       ? rawPath.split('/')
       : [];
+  return parts.map((part) => decodeSegment(String(part))).join('/');
+}
 
-  const route = parts.map((part) => String(part)).join('/');
+module.exports = async function handler(req, res) {
+  const method = String(req.method || 'GET').toUpperCase();
+  const route = getRoute(req);
   const allowedMethods = ROUTES.get(route);
 
   if (!allowedMethods || !allowedMethods.includes(method)) {
@@ -44,7 +80,7 @@ module.exports = async function handler(req, res) {
       return reply(res, 500, 'BOT_API_URL doit être une URL HTTPS valide, sans identifiants ni paramètres.');
     }
 
-    const prefix = base.pathname.replace(/\/+$/, '');
+    const prefix = base.pathname.replace(/\\/+$/, '');
     base.pathname = `${prefix}/api/${route}`;
     base.search = '';
 
